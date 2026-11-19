@@ -1,7 +1,7 @@
 /* Zaman Planlayıcı service worker: uygulama dosyalarını önbelleğe alır, internetsiz de açılır.
    Dosyaları değiştirip yayınladığında VERSION'ı artır ki telefonlar yeni sürümü alsın. */
 "use strict";
-const VERSION = "v9";
+const VERSION = "v10";
 const CACHE = "zaman-planlayici-" + VERSION;
 const ASSETS = [
   "./",
@@ -16,6 +16,7 @@ const ASSETS = [
   "./icons/icon-512.png",
   "./icons/maskable-512.png",
   "./icons/favicon-32.png",
+  "./icons/ttech-logo.png",
   "./fonts/ibm-plex-sans-latin-400-normal.woff2",
   "./fonts/ibm-plex-sans-latin-ext-400-normal.woff2",
   "./fonts/ibm-plex-sans-latin-500-normal.woff2",
