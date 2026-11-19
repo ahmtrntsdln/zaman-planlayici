@@ -176,6 +176,48 @@ nav.tabs button[aria-selected="true"]{background:var(--fill-strong);color:var(--
 .cat .note{font-size:12px;color:var(--muted)}
 .cat .note.over{color:var(--warn)}
 .explain{font-size:13px;color:var(--muted);margin:0 6px}
+/* kategori görünüm seçici: liste / dairesel / dağılım */
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:4px;border-radius:999px}
+.seg button{border:0;background:transparent;border-radius:999px;padding:8px 10px;font-size:13px;font-weight:600;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;transition:background .2s,color .2s}
+.seg button svg{width:16px;height:16px;flex:none}
+.seg button[aria-pressed="true"]{background:var(--fill-strong);color:var(--accent-text);box-shadow:var(--hi)}
+/* dairesel grafik */
+.pie{padding:18px;display:grid;gap:18px;justify-items:center}
+.pie svg{width:min(240px,70vw);height:auto;display:block}
+.pie svg circle.s{transition:opacity .15s}
+.pie svg:hover circle.s:not(:hover){opacity:.45}
+.lg{width:100%;display:flex;flex-direction:column}
+.lg .li{display:grid;grid-template-columns:12px 1fr auto auto;gap:10px;align-items:center;padding:9px 2px;font-size:14px}
+.lg .li + .li{border-top:1px solid var(--hair)}
+.lg .li .name{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.lg .li .v{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.lg .li .p{font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right;min-width:3.5em}
+.lg .li.zero{color:var(--muted)}
+@media (min-width:620px){.pie{grid-template-columns:auto 1fr;align-items:center}}
+/* günlere göre dağılım (yığılmış sütunlar) */
+.dist{padding:16px 16px 12px}
+.plot{display:grid;grid-template-columns:auto 1fr;gap:8px}
+.yax{position:relative;height:220px;width:34px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.yax span{position:absolute;right:0;transform:translateY(50%)}
+.bars{position:relative;height:220px;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;border-bottom:1px solid var(--hair-strong)}
+.bars .gl{position:absolute;left:0;right:0;height:0;border-top:1px dashed var(--hair)}
+.bars .day{position:relative;display:flex;flex-direction:column-reverse;align-items:stretch;justify-content:flex-start;gap:2px;min-width:0;height:100%}
+.bars .day.today{background:var(--fill);border-radius:8px 8px 0 0}
+.bars .tot{position:absolute;left:0;right:0;text-align:center;font-family:var(--mono);font-size:11px;color:var(--muted);transform:translateY(-100%);padding-bottom:3px;white-space:nowrap}
+.bars .sgm{position:relative;margin:0 18%;flex:none;overflow:hidden;cursor:default}
+.bars .sgm .bg{position:absolute;inset:0;opacity:.38}
+.bars .sgm .dn{position:absolute;left:0;right:0;bottom:0}
+.bars .day .sgm:last-of-type{border-radius:4px 4px 0 0}
+.bars .sgm:hover{filter:brightness(1.08) saturate(1.1)}
+.xax{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-left:42px;padding-top:6px;text-align:center;font-size:11px;color:var(--muted)}
+.xax b{display:block;font-size:12px;color:var(--ink);font-weight:600}
+.xax .today b{color:var(--accent-text)}
+.dist .lg{margin-top:12px}
+@media (max-width:430px){.bars .sgm{margin:0 8%}.bars,.xax{gap:3px}.bars .tot{font-size:10px}}
+/* grafik ipucu */
+.ctip{position:fixed;z-index:25;pointer-events:none;background:var(--glass-strong);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border:1px solid var(--stroke);box-shadow:var(--hi),var(--shadow);border-radius:12px;padding:7px 10px;font-size:12px;line-height:1.35;max-width:220px;display:none}
+.ctip b{display:block;font-size:13px}
+.ctip .m{font-family:var(--mono);font-variant-numeric:tabular-nums}
 
 /* düğmeler */
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -273,6 +315,7 @@ label.f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:60
   <button class="round fab" id="fab" type="button" aria-label="Etkinlik ekle" title="Etkinlik ekle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
 </div>
 
+<div class="ctip" id="ctip" aria-hidden="true"></div>
 <div class="toast" id="toast" role="alert"><div class="msg" id="toast-msg"></div><button type="button" id="toast-ok">Tamam</button></div>
 
 <div class="scrim" id="scrim">
@@ -588,9 +631,114 @@ function renderCal(){
   </div>`;
 }
 
+/* Kategoriler ekranının gösterim biçimi: cihaza özel bir tercih, eşitlenmez. */
+const CATVIEW_KEY = "zaman-planlayici-catview";
+const CATVIEWS = [
+  ["list", "Liste", `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h11M4 17h7"/></svg>`],
+  ["pie", "Dairesel", `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 13.5A8.5 8.5 0 1 1 10.5 3.5v10z"/><path d="M14 3.2a8.5 8.5 0 0 1 6.8 6.8H14z"/></svg>`],
+  ["dist", "Dağılım", `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 20v-6M10 20V8M15 20v-9M20 20V4"/></svg>`]
+];
+let catView = (() => { try { const v = localStorage.getItem(CATVIEW_KEY); return CATVIEWS.some(x => x[0] === v) ? v : "list"; } catch(e){ return "list"; } })();
+function setCatView(v){ catView = v; try { localStorage.setItem(CATVIEW_KEY, v); } catch(e){} render(); }
+
+// Bu haftaki etkinliklerin kategorileri: tanımlı türler (sırasıyla) + varsa "Kategorisiz".
+function weekCats(ws){
+  const list = state.categories.map(c => ({c, s: ws[c.id] || {plan:0, done:0}}));
+  let other = {plan:0, done:0};
+  Object.keys(ws).forEach(id => { if (!state.categories.some(c => c.id === id)){ other.plan += ws[id].plan; other.done += ws[id].done; } });
+  if (other.plan) list.push({c: catById(""), s: other});
+  return list;
+}
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+const tipText = (name, s, extra) => `<b>${esc(name)}</b>${extra ? esc(extra) + "<br>" : ""}<span class="m">${fmtH(s.done)}</span> tamam · <span class="m">${fmtH(s.plan)}</span> planlı`;
+
+function renderPie(ws){
+  const items = weekCats(ws);
+  const total = items.reduce((t, x) => t + x.s.plan, 0);
+  const doneTotal = items.reduce((t, x) => t + x.s.done, 0);
+  if (!total) return `<div class="glass group"><div class="empty">Bu hafta henüz planlanmış etkinlik yok.</div></div>`;
+  const R = 80, W = 26, C = 2 * Math.PI * R;
+  const shown = items.filter(x => x.s.plan > 0);
+  const gap = shown.length > 1 ? 2.5 : 0;   // dilimler arasında zemin rengi boşluk
+  let off = 0;
+  const segs = shown.map(x => {
+    const len = x.s.plan / total * C, dash = Math.max(len - gap, 0.6);
+    const tip = tipText(x.c.name, x.s, "%" + pct(x.s.plan, total) + " pay");
+    const el = `<circle class="s" cx="100" cy="100" r="${R}" fill="none" stroke="${x.c.color}" stroke-width="${W}" stroke-dasharray="${dash.toFixed(2)} ${(C - dash).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" data-tip="${esc(tip)}"/>`;
+    off += len; return el;
+  }).join("");
+  const label = shown.map(x => `${x.c.name} %${pct(x.s.plan, total)}`).join(", ");
+  const legend = items.map(x => `<div class="li ${x.s.plan ? "" : "zero"}" data-tip="${esc(tipText(x.c.name, x.s))}">
+      <span class="sw" style="background:${x.c.color}"></span><span class="name">${esc(x.c.name)}</span>
+      <span class="v">${fmtH(x.s.plan)}</span><span class="p">%${pct(x.s.plan, total)}</span></div>`).join("");
+  return `<div class="glass pie">
+      <svg viewBox="0 0 200 200" role="img" aria-label="Bu haftaki planlı süre dağılımı: ${esc(label)}">
+        <g transform="rotate(-90 100 100)"><circle cx="100" cy="100" r="${R}" fill="none" stroke="var(--fill)" stroke-width="${W}"/>${segs}</g>
+        <text x="100" y="98" text-anchor="middle" style="font-family:var(--mono);font-size:22px;font-weight:500;fill:var(--ink)">${esc(fmtH(total))}</text>
+        <text x="100" y="118" text-anchor="middle" style="font-size:11px;fill:var(--muted)">planlı · %${pct(doneTotal, total)} tamam</text>
+      </svg>
+      <div class="lg">${legend}</div>
+    </div>`;
+}
+
+function renderDist(){
+  const ws0 = weekStart(new Date()), we = addDays(ws0, 7), tk = dkey(new Date());
+  const days = Array.from({length: 7}, (_, i) => ({d: addDays(ws0, i), m: {}, total: 0}));
+  const weekTotals = {};
+  state.events.forEach(e => {
+    const s = startOf(e); if (s < ws0 || s >= we) return;
+    const day = days[Math.floor((s - ws0) / 864e5)]; if (!day) return;
+    const id = state.categories.some(c => c.id === e.catId) ? e.catId : "";
+    const k = day.m[id] || (day.m[id] = {plan:0, done:0}), w = weekTotals[id] || (weekTotals[id] = {plan:0, done:0});
+    const dur = +e.dur || 0;
+    k.plan += dur; w.plan += dur; day.total += dur;
+    if (e.done){ k.done += dur; w.done += dur; }
+  });
+  const cats = weekCats(weekTotals);
+  const maxM = Math.max(...days.map(d => d.total));
+  if (!maxM) return `<div class="glass group"><div class="empty">Bu hafta henüz planlanmış etkinlik yok.</div></div>`;
+  // Okunaklı saat adımları
+  const maxH = maxM / 60;
+  const step = [0.5, 1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 24].find(s => maxH / s <= 4) || 24;
+  const topH = Math.ceil(maxH / step) * step, top = topH * 60 * 1.08;   // üstte toplam etiketi için pay
+  const ticks = []; for (let h = 0; h <= topH + 1e-9; h += step) ticks.push(h);
+  const y = m => (m / top * 100).toFixed(2) + "%";
+  const grid = ticks.slice(1).map(h => `<span class="gl" style="bottom:${y(h * 60)}"></span>`).join("");
+  const yax = ticks.map(h => `<span style="bottom:${y(h * 60)}">${h.toLocaleString("tr-TR")}</span>`).join("");
+  const cols = days.map((day, i) => {
+    const k = dkey(day.d), dayName = WDL[day.d.getDay()];
+    const segs = cats.filter(x => day.m[x.c.id || ""] && day.m[x.c.id || ""].plan > 0).map(x => {
+      const s = day.m[x.c.id || ""];
+      return `<div class="sgm" style="height:${y(s.plan)}" data-tip="${esc(tipText(x.c.name, s, dayName))}"><span class="bg" style="background:${x.c.color}"></span><span class="dn" style="height:${pct(s.done, s.plan)}%;background:${x.c.color}"></span></div>`;
+    }).join("");
+    return `<div class="day ${k === tk ? "today" : ""}">${segs}${day.total ? `<span class="tot" style="bottom:${y(day.total)}">${(Math.round(day.total / 6) / 10).toLocaleString("tr-TR")}</span>` : ""}</div>`;
+  }).join("");
+  const xax = days.map((day, i) => `<div class="${dkey(day.d) === tk ? "today" : ""}"><b>${WD[i]}</b>${day.d.getDate()}</div>`).join("");
+  const summary = days.map((day, i) => WD[i] + " " + fmtH(day.total)).join(", ");
+  const legend = cats.filter(x => x.s.plan > 0).map(x => `<div class="li" data-tip="${esc(tipText(x.c.name, x.s))}">
+      <span class="sw" style="background:${x.c.color}"></span><span class="name">${esc(x.c.name)}</span>
+      <span class="v">${fmtH(x.s.done)} / ${fmtH(x.s.plan)}</span><span class="p">%${pct(x.s.done, x.s.plan)}</span></div>`).join("");
+  return `<div class="glass dist">
+      <div class="plot" role="img" aria-label="Günlere göre planlı süre (saat): ${esc(summary)}">
+        <div class="yax" aria-hidden="true">${yax}</div>
+        <div class="bars">${grid}${cols}</div>
+      </div>
+      <div class="xax" aria-hidden="true">${xax}</div>
+      <div class="lg">${legend}</div>
+    </div>`;
+}
+
 function renderCat(){
   const ws = weekStats();
   const ws0 = weekStart(new Date()), we = addDays(ws0,6);
+  const seg = `<div class="glass seg" role="group" aria-label="Gösterim biçimi">${CATVIEWS.map(([k, label, icon]) => `<button type="button" data-catview="${k}" aria-pressed="${k === catView}">${icon}${label}</button>`).join("")}</div>`;
+  const head = `<h2>Bu hafta · ${ws0.getDate()} ${MONTHS[ws0.getMonth()]} – ${we.getDate()} ${MONTHS[we.getMonth()]}</h2>`;
+  if (catView === "pie") return `<section class="narrow">${seg}${head}
+    <p class="explain">Bu haftaki planlı sürenin kategorilere göre payı. Dilimin üzerine gelerek ya da dokunarak ayrıntıyı gör.</p>
+    ${renderPie(ws)}</section>`;
+  if (catView === "dist") return `<section class="narrow">${seg}${head}
+    <p class="explain">Her gün hangi kategoriye ne kadar zaman ayırdığın (saat). Koyu kısım tamamlananı, açık kısım planlananı gösterir.</p>
+    ${renderDist()}</section>`;
   const rows = state.categories.map(c => {
     const s = ws[c.id] || {plan:0, done:0}, tgt = (+c.target||0)*60;
     const max = Math.max(tgt, s.plan, 1);
@@ -606,8 +754,7 @@ function renderCat(){
       <div class="foot"><span class="note ${cls}">${note}</span><span class="nums" aria-label="tamamlanan ${fmtH(s.done)}, planlanan ${fmtH(s.plan)}, hedef ${fmtH(tgt)}">${fmtH(s.done)} / ${fmtH(s.plan)} / ${fmtH(tgt)}</span></div>
     </div>`;
   }).join("");
-  return `<section class="narrow">
-    <h2>Bu hafta · ${ws0.getDate()} ${MONTHS[ws0.getMonth()]} – ${we.getDate()} ${MONTHS[we.getMonth()]}</h2>
+  return `<section class="narrow">${seg}${head}
     <p class="explain">Tamamlanan / planlanan / hedef. Koyu çubuk tamamlananı, açık çubuk planlananı, çizgi hedefi gösterir.</p>
     <div class="glass group">${rows || `<div class="empty">Henüz kategori yok.</div>`}</div>
     <div class="row"><button type="button" class="btn primary" id="add-cat">+ Kategori ekle</button></div>
@@ -861,11 +1008,35 @@ document.getElementById("view").addEventListener("click", ev => {
   if (b.dataset.edit) return openEvent(b.dataset.edit);
   if (b.dataset.day){ selDay = b.dataset.day; render(); return; }
   if (b.dataset.editcat) return openCat(b.dataset.editcat);
+  if (b.dataset.catview){ hideTip(); if (b.dataset.catview !== catView) setCatView(b.dataset.catview); return; }
   if (b.id === "prev"){ calMonth.setMonth(calMonth.getMonth()-1); render(); }
   if (b.id === "next"){ calMonth.setMonth(calMonth.getMonth()+1); render(); }
   if (b.id === "add-on-day") openEvent(null, selDay);
   if (b.id === "add-cat") openCat(null);
 });
+/* grafik ipucu: farede üzerine gelince, dokunmatikte dokununca */
+const ctip = document.getElementById("ctip");
+function showTip(el, x, y){
+  ctip.innerHTML = el.getAttribute("data-tip"); ctip.style.display = "block";
+  const w = ctip.offsetWidth, h = ctip.offsetHeight;
+  let left = x + 14, topY = y - h - 12;
+  if (left + w > innerWidth - 8) left = x - w - 14;
+  if (topY < 8) topY = y + 16;
+  ctip.style.left = Math.max(8, left) + "px"; ctip.style.top = topY + "px";
+}
+function hideTip(){ ctip.style.display = "none"; }
+document.getElementById("view").addEventListener("pointermove", ev => {
+  if (ev.pointerType === "touch") return;
+  const el = ev.target.closest && ev.target.closest("[data-tip]");
+  el ? showTip(el, ev.clientX, ev.clientY) : hideTip();
+});
+document.getElementById("view").addEventListener("pointerleave", hideTip);
+document.addEventListener("pointerdown", ev => {
+  if (ev.pointerType !== "touch") return;
+  const el = ev.target.closest && ev.target.closest("#view [data-tip]");
+  el ? showTip(el, ev.clientX, ev.clientY) : hideTip();
+});
+addEventListener("scroll", hideTip, {passive: true});
 document.getElementById("view").addEventListener("keydown", ev => {
   if ((ev.key === "Enter" || ev.key === " ") && ev.target.dataset && ev.target.dataset.edit){ ev.preventDefault(); openEvent(ev.target.dataset.edit); }
 });
