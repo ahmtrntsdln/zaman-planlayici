@@ -54,6 +54,10 @@ h1{font-family:var(--display);font-size:26px;margin:0;line-height:1.1;text-wrap:
 .sync.ok{color:var(--good)}
 .sync.err{color:var(--warn)}
 .btn:disabled{opacity:.55;cursor:default}
+.updbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--accent);border-radius:12px;padding:10px 12px}
+.updbar[hidden]{display:none}
+.updbar .msg{flex:1;min-width:160px;font-size:14px}
+.updbar .msg b{display:block}
 nav.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--soft);padding:4px;border-radius:12px;position:sticky;top:calc(8px + env(safe-area-inset-top));z-index:5}
 nav.tabs button{border:0;background:transparent;padding:9px 6px;border-radius:9px;font-weight:600;color:var(--muted)}
 nav.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -148,6 +152,8 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:60
     <button role="tab" id="tab-cal" aria-selected="false" data-view="cal">Takvim</button>
     <button role="tab" id="tab-cat" aria-selected="false" data-view="cat">Kategoriler</button>
   </nav>
+
+  <div class="updbar" id="updbar" role="status" hidden><span class="msg" id="updbar-msg"></span><button type="button" class="btn primary" id="updbar-go">Güncelle</button><button type="button" class="iconbtn" id="updbar-x">Sonra</button></div>
 
   <main id="view"></main>
 </div>
@@ -365,9 +371,17 @@ function renderTools(hasSample){
     <p id="acct-line">${accountLine()}</p>
     <div class="row"><button type="button" class="btn" id="btn-account">${window.ZPSync && window.ZPSync.user ? "Hesabı yönet" : "Giriş yap / hesap oluştur"}</button></div>
   </section>
+  ${HAS_UPD ? `<section class="tools">
+    <h2>Uygulama sürümü</h2>
+    <p id="upd-msg">${updText()}</p>
+    <div class="row">
+      <button type="button" class="btn" id="btn-upd-check">Güncellemeleri kontrol et</button>
+      ${updSum && updSum.available ? `<button type="button" class="btn primary" id="btn-upd-apply">Güncelle</button>` : ""}
+    </div>
+  </section>` : ""}
   <section class="tools">
     <h2>Yedek</h2>
-    <p>Veriler sadece bu cihazda saklanır. Ara sıra yedek al; yedek dosyasıyla verilerini başka bir cihaza (örneğin bilgisayardan iPhone'a) da taşıyabilirsin.</p>
+    <p>${window.ZPSync && window.ZPSync.user ? "Verilerin hesabınla eşitleniyor; yine de ara sıra yedek almak iyi bir alışkanlık." : "Giriş yapmadığın sürece veriler yalnızca bu cihazda saklanır. Ara sıra yedek al; yedek dosyasıyla verilerini başka bir cihaza da taşıyabilirsin."}</p>
     <div class="row">
       <button type="button" class="btn" id="btn-backup">Yedek al</button>
       <button type="button" class="btn" id="btn-restore">Yedeği geri yükle</button>
@@ -622,6 +636,8 @@ document.getElementById("view").addEventListener("click", ev => {
   if (b.id === "btn-ics") exportIcs();
   if (b.id === "btn-notif") askNotif();
   if (b.id === "btn-account") openAccount();
+  if (b.id === "btn-upd-check") updCheck();
+  if (b.id === "btn-upd-apply") updApply();
   if (b.id === "btn-backup") exportBackup();
   if (b.id === "btn-restore") document.getElementById("restore-file").click();
   if (b.id === "btn-clear-sample"){ state.events = state.events.filter(e => !e.sample); commit(); }
@@ -722,6 +738,47 @@ async function exportIcs(){
   } catch(e){ if (e && /declin|cancel|reject/i.test(String(e.code||e.message))){ msg.textContent = "İndirme iptal edildi."; return; } }
   try { await navigator.clipboard.writeText(text); msg.textContent = "İndirme bu görünümde açılamadı; takvim metni panoya kopyalandı."; }
   catch(e){ msg.textContent = "İndirme bu görünümde açılamadı."; }
+}
+
+/* ---------- masaüstü: depodan güncelleme ---------- */
+const HAS_UPD = !!(window.desktop && window.desktop.checkUpdate);
+let updInfo = null, updSum = null, updBusy = "", updErr = "", updHidden = null;
+const fmtWhen = iso => { if (!iso) return ""; const d = new Date(iso); return d.getDate() + " " + MONTHS[d.getMonth()] + " " + d.getFullYear() + ", " + pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+function updText(){
+  if (updBusy) return esc(updBusy);
+  let t = "";
+  if (updInfo) t = "Kullanılan sürüm: <b>" + esc(updInfo.commit) + "</b>" + (updInfo.source === "update" ? " (depodan güncellendi" + (updInfo.updatedAt ? ", " + esc(fmtWhen(updInfo.updatedAt)) : "") + ")" : " (paketteki sürüm)") + ". ";
+  if (updErr) return t + esc(updErr);
+  if (!updSum) return t + "Uygulama, GitHub'daki depoda yeni kod olup olmadığını açılışta ve 6 saatte bir kendiliğinden kontrol eder.";
+  if (updSum.available) return t + "<b>Yeni sürüm var:</b> " + esc(updSum.message || updSum.commit) + " (" + esc(updSum.commit) + ", " + updSum.files + " dosya farklı)." + (updSum.shellChanged ? " Masaüstü kabuğunda da değişiklik var; onun için ayrıca yeni AppImage kurman gerekebilir." : "");
+  return t + "Güncelsin: kod depodaki son sürümle (" + esc(updSum.commit) + ") aynı." + (updSum.shellChanged ? " Masaüstü kabuğunda değişiklik var; onun için yeni AppImage kurman gerekir." : "");
+}
+function updView(){
+  const m = document.getElementById("upd-msg");
+  if (m){ if (view === "today") render(); }
+  const bar = document.getElementById("updbar");
+  const show = HAS_UPD && updSum && updSum.available && updHidden !== updSum.commit;
+  bar.hidden = !show;
+  if (show) document.getElementById("updbar-msg").innerHTML = "<b>Yeni sürüm var</b>" + esc(updSum.message || updSum.commit) + " · " + updSum.files + " dosya";
+}
+async function updCheck(){
+  updBusy = "Depo kontrol ediliyor…"; updErr = ""; updView();
+  try { updSum = await window.desktop.checkUpdate(); }
+  catch(e){ updErr = cleanErr(e); }
+  updBusy = ""; updView();
+}
+async function updApply(){
+  updBusy = "Güncelleniyor… değişen dosyalar indiriliyor ve doğrulanıyor."; updErr = ""; updView();
+  document.querySelectorAll("#updbar-go, #btn-upd-apply").forEach(b => b.disabled = true);
+  try { await window.desktop.applyUpdate(); updBusy = "Güncellendi, uygulama yeniden yükleniyor…"; updView(); }
+  catch(e){ updBusy = ""; updErr = "Güncelleme yapılamadı: " + cleanErr(e) + " Uygulama önceki sürümle çalışmaya devam ediyor."; updView(); }
+}
+const cleanErr = e => String(e && e.message || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, "");
+if (HAS_UPD){
+  window.desktop.updateInfo().then(i => { updInfo = i; if (i && i.pending) updSum = i.pending; updView(); }).catch(() => {});
+  if (window.desktop.onUpdateStatus) window.desktop.onUpdateStatus(sum => { if (sum) { updSum = sum; updErr = ""; } else updSum = null; updView(); });
+  document.getElementById("updbar-go").addEventListener("click", updApply);
+  document.getElementById("updbar-x").addEventListener("click", () => { updHidden = updSum && updSum.commit; updView(); });
 }
 
 /* ---------- yedek ---------- */

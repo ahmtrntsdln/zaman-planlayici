@@ -8,8 +8,15 @@ const SRC = path.join(__dirname, "..", "src");
 const BUILD = SRC; // icon.png ve tray.png src/ içinde paketlenir
 
 // Veriler ~/.config/zaman-planlayici altında dursun (Türkçe karaktersiz klasör adı).
-app.setPath("userData", path.join(app.getPath("appData"), "zaman-planlayici"));
+// ZP_USER_DATA yalnızca testlerde gerçek verilere dokunmamak için kullanılır.
+app.setPath("userData", process.env.ZP_USER_DATA || path.join(app.getPath("appData"), "zaman-planlayici"));
 app.setName(APP_NAME);
+
+const { createUpdater } = require("./updater");
+const updater = createUpdater({ bundledSrc: SRC, shellDir: __dirname, userData: app.getPath("userData") });
+const UPDATE_EVERY = 6 * 60 * 60 * 1000;
+let notifiedCommit = null;
+let pendingUpdate = null;   // { commit, message, files, shellChanged } — tepsi menüsünde gösterilir
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -72,7 +79,7 @@ function createWindow(show) {
     }
   });
 
-  win.loadFile(path.join(SRC, "index.html"));
+  win.loadFile(path.join(updater.activeDir(), "index.html"));
   if (show) win.once("ready-to-show", () => win.show());
 
   // Kapat düğmesi uygulamayı kapatmaz, tepsiye gizler; hatırlatmalar sürer.
@@ -104,17 +111,21 @@ function createWindow(show) {
 function createTray() {
   tray = new Tray(path.join(BUILD, "tray.png"));
   tray.setToolTip(APP_NAME);
-  const rebuild = () => tray.setContextMenu(Menu.buildFromTemplate([
+  rebuildTray = () => tray.setContextMenu(Menu.buildFromTemplate([
     { label: "Göster", click: showWindow },
+    { type: "separator" },
+    pendingUpdate
+      ? { label: `Güncelleme var (${pendingUpdate.commit}) · Güncelle…`, click: () => interactiveCheck() }
+      : { label: "Güncellemeleri kontrol et", click: () => interactiveCheck() },
     { type: "separator" },
     {
       label: "Oturum açılınca başlat", type: "checkbox", checked: isAutostart(),
-      click: (item) => { try { setAutostart(item.checked); } catch (err) { dialog.showErrorBox(APP_NAME, String(err)); } rebuild(); }
+      click: (item) => { try { setAutostart(item.checked); } catch (err) { dialog.showErrorBox(APP_NAME, String(err)); } rebuildTray(); }
     },
     { type: "separator" },
     { label: "Çıkış", click: () => { quitting = true; app.quit(); } }
   ]));
-  rebuild();
+  rebuildTray();
   tray.on("click", () => (win && win.isVisible() && win.isFocused() ? win.hide() : showWindow()));
 }
 
@@ -138,8 +149,77 @@ function createMenu() {
         { type: "separator" },
         { role: "toggleDevTools", label: "Geliştirici araçları" }
       ]
+    },
+    {
+      label: "Yardım",
+      submenu: [
+        { label: "Güncellemeleri kontrol et", click: () => interactiveCheck() },
+        { label: "Paketteki sürüme dön", click: () => resetToBundled() },
+        { type: "separator" },
+        { label: "Sürüm bilgisi", click: () => showVersion() }
+      ]
     }
   ]));
+}
+
+/* ---------- güncelleme ---------- */
+let rebuildTray = () => {};
+function setPending(sum) {
+  pendingUpdate = sum && sum.available ? sum : null;
+  tray && tray.setToolTip(pendingUpdate ? `${APP_NAME} · güncelleme var` : APP_NAME);
+  rebuildTray();
+  if (win) win.webContents.send("update:status", sum);
+}
+async function backgroundCheck() {
+  try {
+    const sum = await updater.check();
+    setPending(sum);
+    if (sum.available && sum.commit !== notifiedCommit && Notification.isSupported()) {
+      notifiedCommit = sum.commit;
+      const n = new Notification({ title: APP_NAME, body: `Yeni sürüm var: ${sum.message || sum.commit}. Güncellemek için tıkla.`, icon: path.join(BUILD, "icon.png") });
+      n.on("click", () => interactiveCheck());
+      n.show();
+    }
+  } catch (e) { /* arka planda sessizce geç; elle kontrol hatayı gösterir */ }
+}
+async function applyAndReload() {
+  const res = await updater.apply();
+  setPending(null);
+  if (win) setTimeout(() => win && win.loadFile(path.join(updater.activeDir(), "index.html")), 300);
+  return res;
+}
+async function interactiveCheck() {
+  showWindow();
+  let sum;
+  try { sum = await updater.check(); }
+  catch (e) { dialog.showMessageBox(win, { type: "error", title: APP_NAME, message: "Güncellemeler kontrol edilemedi", detail: e.message }); return; }
+  setPending(sum);
+  if (!sum.available) {
+    const i = updater.info();
+    dialog.showMessageBox(win, { type: "info", title: APP_NAME, message: "Uygulama güncel", detail: `Kullandığın kod depodaki son sürümle aynı (${sum.commit}).` + (sum.shellChanged ? "\n\nNot: Masaüstü kabuğunda değişiklik var; bunun için yeni AppImage kurman gerekir." : "") });
+    return;
+  }
+  const { response } = await dialog.showMessageBox(win, {
+    type: "question", title: APP_NAME, buttons: ["Güncelle", "Sonra"], defaultId: 0, cancelId: 1,
+    message: "Yeni sürüm var",
+    detail: `${sum.message || ""}\n\nDepodaki sürüm: ${sum.commit} · ${sum.files} dosya farklı.\nVerilerin etkilenmez; uygulama yeniden yüklenir.` +
+      (sum.shellChanged ? "\n\nBu sürümde masaüstü kabuğunda da değişiklik var; onun için ayrıca yeni AppImage kurman gerekebilir." : "")
+  });
+  if (response !== 0) return;
+  try { await applyAndReload(); }
+  catch (e) { dialog.showMessageBox(win, { type: "error", title: APP_NAME, message: "Güncelleme yapılamadı", detail: e.message + "\n\nUygulama önceki sürümle çalışmaya devam ediyor." }); }
+}
+async function resetToBundled() {
+  if (updater.info().source !== "update") { dialog.showMessageBox(win, { type: "info", title: APP_NAME, message: "Zaten paketteki sürümü kullanıyorsun." }); return; }
+  const { response } = await dialog.showMessageBox(win, { type: "question", title: APP_NAME, buttons: ["Geri dön", "Vazgeç"], defaultId: 1, cancelId: 1, message: "İndirilen güncellemeyi kaldırıp paketteki sürüme dönülsün mü?", detail: "Verilerin etkilenmez." });
+  if (response !== 0) return;
+  updater.reset();
+  if (win) win.loadFile(path.join(updater.activeDir(), "index.html"));
+}
+function showVersion() {
+  const i = updater.info();
+  dialog.showMessageBox(win, { type: "info", title: APP_NAME, message: `${APP_NAME} · ${i.commit}`,
+    detail: (i.source === "update" ? `Depodan güncellendi: ${i.message || ""}\nGüncelleme zamanı: ${i.updatedAt}` : "Paketteki sürüm") + `\nElectron ${process.versions.electron}` });
 }
 
 /* ---------- köprü (renderer → ana süreç) ---------- */
@@ -161,6 +241,9 @@ ipcMain.handle("save-file", async (_e, filename, text, ext) => {
   return { saved: true, path: filePath };
 });
 ipcMain.on("show-window", showWindow);
+ipcMain.handle("update:info", () => Object.assign(updater.info(), { pending: updater.summary() }));
+ipcMain.handle("update:check", async () => { const sum = await updater.check(); setPending(sum); return sum; });
+ipcMain.handle("update:apply", () => applyAndReload());
 
 /* ---------- yaşam döngüsü ---------- */
 app.on("second-instance", showWindow);
@@ -175,4 +258,7 @@ app.whenReady().then(() => {
   createMenu();
   createWindow(!startHidden);
   createTray();
+  // Açılıştan kısa süre sonra ve sonra 6 saatte bir sessizce kontrol et.
+  setTimeout(backgroundCheck, 15 * 1000);
+  setInterval(backgroundCheck, UPDATE_EVERY);
 });

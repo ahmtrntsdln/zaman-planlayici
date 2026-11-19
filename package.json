@@ -11,7 +11,7 @@
     "start": "electron .",
     "dist": "electron-builder --linux AppImage",
     "build:firebase": "esbuild sync/firebase-entry.js --bundle --format=esm --minify --target=es2020,safari15 --legal-comments=external --outfile=src/vendor/firebase.js",
-    "predist": "npm run build:firebase",
+    "predist": "npm run build:firebase && node scripts/build-info.js",
     "emulators": "firebase emulators:start --project demo-zaman --only auth,firestore"
   },
   "devDependencies": {
