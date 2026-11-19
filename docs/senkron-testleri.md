@@ -60,7 +60,7 @@ Başlangıç (iki cihazda): `A: Fizik çalışması✔ | A: Kütüphane | B: Mar
 Son durum (A ve B aynı):
 `A(çevrimdışı): Tren yolculuğu | A: Fizik çalışması✔ | A: Kütüphane✔ | B: Diş hekimi | B: Market (B'nin sonraki sürümü)`
 
-Dört değişikliğin hepsi korundu; aynı öğede daha sonra yapılan değişiklik (B) kazandı. İki cihaz da "Senkronize ✓".
+Beş değişiklikten dördü korundu (Tren yolculuğu, Kütüphane'nin tamamlanması, Diş hekimi, B'nin Market adı). Beşincisi, A'nın aynı Market etkinliğine yaptığı daha eski ad değişikliği, kurala uygun olarak daha sonraki B değişikliğine yer verdi. İki cihaz da "Senkronize ✓".
 
 ## 3. Güvenlik kuralları (doğrudan REST, emülatör)
 
