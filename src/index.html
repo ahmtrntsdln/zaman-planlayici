@@ -99,14 +99,17 @@ section,.stack,.col{display:flex;flex-direction:column;gap:10px}
 .tip{border-radius:18px;padding:12px 14px;font-size:13px;color:var(--muted)}
 
 /* alt cam çubuk */
-.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom));width:min(620px,calc(100% - 20px));display:flex;align-items:center;gap:10px;z-index:15}
+.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom));width:min(680px,calc(100% - 20px));display:flex;align-items:center;gap:10px;z-index:15}
 .dock .round{width:56px;height:56px;border-radius:50%;flex:none;display:grid;place-items:center;color:var(--ink)}
 .dock .round svg{width:24px;height:24px}
 .dock .fab{background:var(--accent);color:var(--accent-ink);border-color:rgba(255,255,255,.35);background-image:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 60%)}
 .dock .fab svg{width:26px;height:26px}
-nav.tabs{flex:1;min-width:0;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;height:60px;padding:5px;border-radius:999px}
+nav.tabs{flex:1;min-width:0;display:grid;grid-template-columns:repeat(6,1fr);gap:2px;height:60px;padding:5px;border-radius:999px}
 nav.tabs button{border:0;background:transparent;border-radius:999px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:11px;font-weight:600;color:var(--muted);transition:background .2s,color .2s;min-width:0;padding:0 2px}
 nav.tabs button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+nav.tabs button{position:relative}
+nav.tabs .badge{position:absolute;top:3px;left:calc(50% + 4px);min-width:17px;height:17px;padding:0 4px;border-radius:99px;background:var(--warn);color:#fff;font:700 10px/17px var(--body);font-style:normal;text-align:center;box-shadow:0 0 0 2px var(--solid)}
+nav.tabs .badge[hidden]{display:none}
 nav.tabs button svg{width:22px;height:22px}
 nav.tabs button[aria-selected="true"]{background:var(--fill-strong);color:var(--accent-text);box-shadow:var(--hi)}
 
@@ -237,6 +240,15 @@ nav.tabs button[aria-selected="true"]{background:var(--fill-strong);color:var(--
 .prow b{display:block;font-weight:600;overflow-wrap:anywhere}
 .prow small{display:block;font-size:12px;color:var(--muted)}
 .btn.sm{padding:7px 12px;font-size:13px}
+.prow.rvitem{width:100%;border:0;background:transparent;text-align:left;color:var(--ink);grid-template-columns:10px 1fr auto;transition:background .15s}
+.prow small.said{color:var(--ink);opacity:.8;margin-top:2px;white-space:pre-line}
+@media (hover:hover){.prow.rvitem:hover{background:var(--fill)}}
+.weekbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px}
+.weekbar div{text-align:center}
+.weekbar b{display:block;font-size:16px;font-weight:600}
+.weekbar small{display:block;font-size:12px;color:var(--muted)}
+.weekbar button{border:0;background:var(--fill);border-radius:50%;width:38px;height:38px;font-size:18px;display:grid;place-items:center;flex:none}
+.weekbar button:disabled{opacity:.3;cursor:default}
 .verim{padding:16px 18px;display:flex;flex-direction:column;gap:14px}
 .verim h3{margin:0;font-size:16px;font-weight:600}
 .verim .ph{margin:0;font-size:13px;color:var(--muted)}
@@ -251,7 +263,7 @@ nav.tabs button[aria-selected="true"]{background:var(--fill-strong);color:var(--
 .scale i:first-child{border-radius:99px 2px 2px 99px;background:var(--warn)}
 .scale i:nth-child(2){border-radius:2px;background:var(--accent)}
 .scale i:nth-child(3){border-radius:2px 99px 99px 2px;background:var(--good)}
-.scale.empty i{background:var(--fill-strong);opacity:1}
+.scale.blank i{background:var(--fill-strong);opacity:1}
 .scale .mk{position:absolute;top:50%;width:18px;height:18px;border-radius:50%;transform:translate(-50%,-50%);background:var(--solid);border:4px solid var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.25)}
 .scale-l{display:grid;grid-template-columns:repeat(3,1fr);font-size:11px;color:var(--muted);text-align:center}
 .vweek{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
@@ -347,7 +359,8 @@ label.f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:60
 
 @media (max-width:600px){nav.tabs button{font-size:10px}}
 /* dar ekranda 5 sekme yalnızca simgeyle; adları aria-label/title'da */
-@media (max-width:460px){.dock{gap:6px;width:calc(100% - 14px)}.dock .round{width:50px;height:50px}nav.tabs{height:56px}nav.tabs button{font-size:0;gap:0}nav.tabs button svg{width:23px;height:23px}}
+@media (max-width:460px){.dock{gap:5px;width:calc(100% - 12px)}.dock .round{width:48px;height:48px}.dock .round svg{width:22px;height:22px}nav.tabs{height:54px;padding:4px}nav.tabs button{font-size:0;gap:0;padding:0}nav.tabs button svg{width:22px;height:22px}}
+@media (max-width:360px){.dock .round{width:44px;height:44px}nav.tabs button svg{width:20px;height:20px}}
 @media (max-width:400px){.stat{padding:0 10px}.stat b{font-size:17px}.ev{grid-template-columns:10px 46px 1fr auto;gap:10px}h1{font-size:28px}}
 /* geniş ekran / tam ekran: iki sütun */
 @media (min-width:980px){
@@ -391,6 +404,7 @@ label.f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:60
     <button role="tab" id="tab-tasks" aria-selected="false" data-view="tasks" aria-label="Görevler" title="Görevler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="m8 12.5 2.8 2.8L16.5 9"/></svg><span>Görevler</span></button>
     <button role="tab" id="tab-notes" aria-selected="false" data-view="notes" aria-label="Notlar" title="Notlar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14.5 3v4.5H19M9.5 12h6M9.5 16h4"/></svg><span>Notlar</span></button>
     <button role="tab" id="tab-cat" aria-selected="false" data-view="cat" aria-label="Kategoriler" title="Kategoriler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 13.5A8.5 8.5 0 1 1 10.5 3.5v10z"/><path d="M14 3.2a8.5 8.5 0 0 1 6.8 6.8H14z"/></svg><span>Kategoriler</span></button>
+    <button role="tab" id="tab-verim" aria-selected="false" data-view="verim" aria-label="Verim" title="Verim"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 16.5a8.5 8.5 0 1 1 17 0"/><path d="M12 16.5 16 10"/><circle cx="12" cy="16.5" r="1.4" fill="currentColor"/></svg><span>Verim</span><i class="badge" id="verim-badge" aria-hidden="true" hidden></i></button>
   </nav>
   <button class="round fab" id="fab" type="button" aria-label="Etkinlik ekle" title="Etkinlik ekle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
 </div>
@@ -635,8 +649,6 @@ function renderToday(){
         <div class="stat"><b>${fmtH(weekPlan)}</b><span>hafta · ${fmtH(weekTarget)} hedef</span></div>
       </div>
       ${card}
-      ${pendingHtml(now)}
-      ${verimHtml(now)}
     </div>
     <div class="col">
       <section>
@@ -651,6 +663,12 @@ function renderToday(){
   </div>`;
 }
 
+// Verim sekmesinde değerlendirme bekleyen etkinlik sayısı
+function updateBadge(){
+  const n = pendingReviews().length, b = document.getElementById("verim-badge"), tab = document.getElementById("tab-verim");
+  b.textContent = n > 9 ? "9+" : String(n); b.hidden = !n;
+  tab.setAttribute("aria-label", n ? "Verim, " + n + " etkinlik değerlendirme bekliyor" : "Verim");
+}
 function pendingHtml(now){
   const pend = pendingReviews(now);
   if (!pend.length) return "";
@@ -662,7 +680,7 @@ function pendingHtml(now){
   }).join("")}</div></section>`;
 }
 function scaleHtml(v){
-  if (v.score === null) return `<div class="scale empty" aria-hidden="true"><i></i><i></i><i></i></div>`;
+  if (v.score === null) return `<div class="scale blank" aria-hidden="true"><i></i><i></i><i></i></div>`;
   return `<div class="scale" role="img" aria-label="Verim ${v.score}/100, ${RATINGS[verimLevel(v.score)][0]}"><i></i><i></i><i></i><span class="mk" style="left:${Math.min(97, Math.max(3, v.score))}%"></span></div>`;
 }
 function verimRow(label, v){
@@ -670,9 +688,45 @@ function verimRow(label, v){
   return `<div class="vrow"><div class="vt"><b>${label}</b>${v.score !== null ? `<span class="sc">${RATINGS[verimLevel(v.score)][0]} <span>${v.score}/100</span></span>` : ""}</div>
     ${scaleHtml(v)}<small>${sub}</small></div>`;
 }
-function verimHtml(now){
-  const ws = weekStart(now), tk = dkey(now);
+let verimWeek = 0;   // Verim sayfasında gösterilen hafta: 0 bu hafta, -1 geçen hafta…
+function renderVerim(){
+  const now = new Date(), ws = addDays(weekStart(now), 7 * verimWeek), we = addDays(ws, 6);
   const inWeek = state.events.filter(e => { const s = startOf(e); return s >= ws && s < addDays(ws, 7); });
+  const title = verimWeek === 0 ? "Bu hafta" : verimWeek === -1 ? "Geçen hafta" : verimWeek === 1 ? "Gelecek hafta" : "Hafta";
+  // kategorilere göre
+  const cats = state.categories.concat(inWeek.some(e => !state.categories.some(c => c.id === e.catId)) ? [catById("")] : [])
+    .map(c => ({c, v: verimOf(inWeek.filter(e => (state.categories.some(x => x.id === e.catId) ? e.catId : "") === c.id))}))
+    .filter(x => x.v.n || x.v.skip);
+  const catRows = cats.map(x => verimRow(`<span class="sw" style="background:${x.c.color};display:inline-block;width:10px;height:10px;margin-right:8px"></span>${esc(x.c.name)}`, x.v)).join("");
+  // değerlendirmeler, günlere göre
+  const done = inWeek.filter(reviewed).sort((a, b) => startOf(b) - startOf(a));
+  const byDay = {}; done.forEach(e => (byDay[e.date] = byDay[e.date] || []).push(e));
+  const list = Object.keys(byDay).sort().reverse().map(k => `<div class="daylabel">${esc(dayTitle(k))}</div><div class="glass group">${byDay[k].map(e => {
+    const c = catById(e.catId), r = e.rv > 0 ? RATINGS[e.rv] : null;
+    return `<button type="button" class="prow rvitem" data-review="${e.id}">
+      <span class="bar" style="background:${c.color}"></span>
+      <span><b>${esc(e.title)}</b><small>${esc(e.time)} · ${esc(c.name)}${r ? " · " + fmtDur(e.rvMin) : ""}</small>${e.rvText ? `<small class="said">“${esc(e.rvText)}”</small>` : ""}</span>
+      <span class="tag">${r ? `<i class="rd" style="background:${r[2]}"></i>${r[0]}` : "yapılmadı"}</span></button>`;
+  }).join("")}</div>`).join("");
+  return `<div class="cols">
+    <div class="col">
+      ${pendingHtml(now)}
+      <div class="glass weekbar"><button type="button" id="vw-prev" aria-label="Önceki hafta">‹</button>
+        <div><b>${title}</b><small>${ws.getDate()} ${MONTHS[ws.getMonth()]} – ${we.getDate()} ${MONTHS[we.getMonth()]}</small></div>
+        <button type="button" id="vw-next" aria-label="Sonraki hafta" ${verimWeek >= 0 ? "disabled" : ""}>›</button></div>
+      ${verimHtml(now, ws, inWeek, title)}
+      ${catRows ? `<div class="glass verim"><h3>Kategorilere göre verim</h3>${catRows}</div>` : ""}
+    </div>
+    <div class="col">
+      <section>
+        <h2>Değerlendirmeler</h2>
+        ${list || `<div class="glass group"><div class="empty">${verimWeek === 0 ? "Bu hafta henüz değerlendirilmiş etkinlik yok." : "Bu haftada değerlendirilmiş etkinlik yok."}</div></div>`}
+      </section>
+    </div>
+  </div>`;
+}
+function verimHtml(now, ws, inWeek, title){
+  const tk = dkey(now), cur = dkey(weekStart(now)) === dkey(ws);
   const day = verimOf(state.events.filter(e => e.date === tk)), week = verimOf(inWeek);
   const days = Array.from({length: 7}, (_, i) => { const k = dkey(addDays(ws, i)); return {k, i, v: verimOf(inWeek.filter(e => e.date === k))}; });
   const strip = days.map(d => {
@@ -683,9 +737,9 @@ function verimHtml(now){
   const any = week.n || week.skip;
   return `<div class="glass verim">
     <h3>Verim skalası</h3>
-    ${any ? "" : `<p class="ph">Bir etkinlik bittiğinde ne yaptığını, ne kadar zaman ayırdığını ve verimini soracağım. Cevapların burada günlük ve haftalık verim skalana dönüşür.</p>`}
-    ${verimRow("Bugün", day)}
-    ${verimRow("Bu hafta", week)}
+    ${any || !cur ? "" : `<p class="ph">Bir etkinlik bittiğinde ne yaptığını, ne kadar zaman ayırdığını ve verimini soracağım. Cevapların burada günlük ve haftalık verim skalana dönüşür.</p>`}
+    ${cur ? verimRow("Bugün", day) : ""}
+    ${verimRow(title, week)}
     <div class="scale-l" aria-hidden="true"><span>Kötü</span><span>İyi</span><span>Verimli</span></div>
     ${any ? `<div class="vweek" aria-label="Haftanın günlerine göre verim">${strip}</div>` : ""}
   </div>`;
@@ -957,10 +1011,11 @@ function renderCat(){
 function render(){
   const now = new Date();
   document.getElementById("today-str").textContent = now.getDate() + " " + MONTHS[now.getMonth()] + " " + now.getFullYear() + ", " + WDL[now.getDay()];
-  document.getElementById("hello").textContent = {today: "Bugün", cal: "Takvim", tasks: "Görevler", notes: "Notlar", cat: "Zaman dağılımı"}[view];
+  document.getElementById("hello").textContent = {today: "Bugün", cal: "Takvim", tasks: "Görevler", notes: "Notlar", cat: "Zaman dağılımı", verim: "Verim"}[view];
   document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === view)));
+  updateBadge();
   const v = document.getElementById("view");
-  v.innerHTML = `<div class="stack">${({today: renderToday, cal: renderCal, tasks: renderTasks, notes: renderNotes, cat: renderCat})[view]()}</div>`;
+  v.innerHTML = `<div class="stack">${({today: renderToday, cal: renderCal, tasks: renderTasks, notes: renderNotes, cat: renderCat, verim: renderVerim})[view]()}</div>`;
 }
 
 /* ---------- etkinlik formu ---------- */
@@ -1325,6 +1380,8 @@ document.getElementById("view").addEventListener("click", ev => {
   if (b.id === "prev"){ calMonth.setMonth(calMonth.getMonth()-1); render(); }
   if (b.id === "next"){ calMonth.setMonth(calMonth.getMonth()+1); render(); }
   if (b.id === "add-on-day") openEvent(null, selDay);
+  if (b.id === "vw-prev"){ verimWeek--; render(); }
+  if (b.id === "vw-next" && verimWeek < 0){ verimWeek++; render(); }
   if (b.id === "add-cat") openCat(null);
 });
 document.getElementById("view").addEventListener("submit", ev => {
@@ -1395,7 +1452,8 @@ function checkReminders(){
   document.querySelectorAll("[data-remaining]").forEach(el => el.textContent = leftTime(+el.dataset.remaining - now));
   document.querySelectorAll("[data-prog]").forEach(el => { const [a, b] = el.dataset.prog.split(",").map(Number); el.style.width = Math.min(100, Math.max(0, (now - a) / (b - a) * 100)).toFixed(1) + "%"; });
   // Bir etkinlik başladıysa ya da bittiyse "Aktif" / "Sıradaki" kartını yenile.
-  if (view === "today" && todayStateKey(new Date(now)) !== todayKey) render();
+  const key = todayStateKey(new Date(now));
+  if (key !== todayKey){ todayKey = key; if (view === "today" || view === "verim") render(); else updateBadge(); }
 }
 /* Biten etkinlik için değerlendirmeyi bir kez kendiliğinden aç (bu cihazda); sonra "Nasıl geçti?" kartında bekler. */
 const ASKED_KEY = "zaman-planlayici-asked";

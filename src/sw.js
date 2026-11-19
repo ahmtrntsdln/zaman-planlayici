@@ -1,7 +1,7 @@
 /* Zaman Planlayıcı service worker: uygulama dosyalarını önbelleğe alır, internetsiz de açılır.
    Dosyaları değiştirip yayınladığında VERSION'ı artır ki telefonlar yeni sürümü alsın. */
 "use strict";
-const VERSION = "v10";
+const VERSION = "v11";
 const CACHE = "zaman-planlayici-" + VERSION;
 const ASSETS = [
   "./",
