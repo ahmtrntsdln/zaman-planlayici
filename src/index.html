@@ -99,13 +99,14 @@ section,.stack,.col{display:flex;flex-direction:column;gap:10px}
 .tip{border-radius:18px;padding:12px 14px;font-size:13px;color:var(--muted)}
 
 /* alt cam çubuk */
-.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom));width:min(540px,calc(100% - 20px));display:flex;align-items:center;gap:10px;z-index:15}
+.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom));width:min(620px,calc(100% - 20px));display:flex;align-items:center;gap:10px;z-index:15}
 .dock .round{width:56px;height:56px;border-radius:50%;flex:none;display:grid;place-items:center;color:var(--ink)}
 .dock .round svg{width:24px;height:24px}
 .dock .fab{background:var(--accent);color:var(--accent-ink);border-color:rgba(255,255,255,.35);background-image:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0) 60%)}
 .dock .fab svg{width:26px;height:26px}
-nav.tabs{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;height:60px;padding:5px;border-radius:999px}
-nav.tabs button{border:0;background:transparent;border-radius:999px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:11px;font-weight:600;color:var(--muted);transition:background .2s,color .2s}
+nav.tabs{flex:1;min-width:0;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;height:60px;padding:5px;border-radius:999px}
+nav.tabs button{border:0;background:transparent;border-radius:999px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:11px;font-weight:600;color:var(--muted);transition:background .2s,color .2s;min-width:0;padding:0 2px}
+nav.tabs button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 nav.tabs button svg{width:22px;height:22px}
 nav.tabs button[aria-selected="true"]{background:var(--fill-strong);color:var(--accent-text);box-shadow:var(--hi)}
 
@@ -228,6 +229,72 @@ nav.tabs button[aria-selected="true"]{background:var(--fill-strong);color:var(--
 @media (hover:hover){.btn:not(.primary):not(:disabled):hover{background:var(--fill-strong)}}
 .iconbtn{border:0;background:transparent;color:var(--accent-text);padding:4px 8px;border-radius:999px;font-weight:600;font-size:13px}
 
+/* değerlendirme & verim */
+.tag i.rd{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:0}
+.prow{display:grid;grid-template-columns:10px 1fr auto;gap:12px;align-items:center;padding:10px 12px 10px 14px}
+.prow + .prow{border-top:1px solid var(--hair)}
+.prow .bar{width:10px;height:10px;border-radius:50%}
+.prow b{display:block;font-weight:600;overflow-wrap:anywhere}
+.prow small{display:block;font-size:12px;color:var(--muted)}
+.btn.sm{padding:7px 12px;font-size:13px}
+.verim{padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.verim h3{margin:0;font-size:16px;font-weight:600}
+.verim .ph{margin:0;font-size:13px;color:var(--muted)}
+.vrow{display:flex;flex-direction:column;gap:6px}
+.vrow .vt{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.vrow .vt b{font-size:14px}
+.vrow .vt .sc{font-size:13px;font-weight:600}
+.vrow .vt .sc span{font-family:var(--mono);font-weight:500;color:var(--muted)}
+.vrow small{font-size:12px;color:var(--muted)}
+.scale{position:relative;height:10px;display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.scale i{opacity:.32}
+.scale i:first-child{border-radius:99px 2px 2px 99px;background:var(--warn)}
+.scale i:nth-child(2){border-radius:2px;background:var(--accent)}
+.scale i:nth-child(3){border-radius:2px 99px 99px 2px;background:var(--good)}
+.scale.empty i{background:var(--fill-strong);opacity:1}
+.scale .mk{position:absolute;top:50%;width:18px;height:18px;border-radius:50%;transform:translate(-50%,-50%);background:var(--solid);border:4px solid var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.scale-l{display:grid;grid-template-columns:repeat(3,1fr);font-size:11px;color:var(--muted);text-align:center}
+.vweek{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.vweek .c{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--muted)}
+.vweek .c .h{height:48px;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.vweek .c .h i{display:block;width:62%;border-radius:4px 4px 0 0;min-height:4px}
+.vweek .c.none .h i{height:4px;background:var(--fill-strong);border-radius:2px}
+.vweek .c.today b{color:var(--accent-text)}
+.vweek .c b{font-size:11px;font-weight:600;color:var(--ink)}
+.rvhead{display:flex;gap:12px;align-items:center}
+.rvhead b{display:block;font-size:16px;overflow-wrap:anywhere}
+.rvhead small{display:block;font-size:13px;color:var(--muted)}
+.rate{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rate button{border:2px solid transparent;background:var(--fill);border-radius:16px;padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;font-weight:600;font-size:15px;color:var(--ink)}
+.rate button .dot{width:14px;height:14px;border-radius:50%}
+.rate button small{font-weight:400;font-size:11px;color:var(--muted)}
+.rate button[aria-pressed="true"]{border-color:var(--ink);background:var(--fill-strong)}
+.rvsum{font-size:13px;color:var(--muted);background:var(--fill);border-radius:14px;padding:10px 12px;margin:0;overflow-wrap:anywhere}
+/* görevler (checklist) */
+.taskadd{display:flex;gap:6px;padding:6px 6px 6px 16px;border-radius:999px;align-items:center}
+.taskadd input{flex:1;min-width:0;border:0;background:transparent;padding:8px 0;font-size:16px;color:var(--ink)}
+.taskadd input:focus{outline:none}
+.taskadd:focus-within{outline:2px solid var(--accent);outline-offset:1px}
+.task{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 6px 8px 12px}
+.task + .task{border-top:1px solid var(--hair)}
+.task .tt{border:0;background:transparent;text-align:left;padding:6px 4px;overflow-wrap:anywhere;color:var(--ink);border-radius:8px}
+.task.done .tt{text-decoration:line-through;color:var(--muted)}
+.task.done .chk{background:var(--good);border-color:var(--good);color:#fff}
+.task .x{border:0;background:transparent;color:var(--muted);width:34px;height:34px;border-radius:50%;font-size:20px;line-height:1;display:grid;place-items:center}
+@media (hover:hover){.task .x:hover,.task .tt:hover{background:var(--fill)}}
+.secrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.secrow h2{margin:0 4px}
+/* notlar */
+.nsearch{width:100%;border-radius:999px;padding:12px 18px;font-size:16px;color:var(--ink)}
+.nsearch:focus{outline:2px solid var(--accent);outline-offset:1px}
+.notes{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.ncard{padding:14px 16px;display:flex;flex-direction:column;gap:6px;text-align:left;border-radius:18px;min-height:112px;color:var(--ink)}
+.ncard b{font-weight:600;overflow-wrap:anywhere}
+.ncard p{margin:0;font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line;overflow-wrap:anywhere}
+.ncard small{margin-top:auto;font-size:11px;color:var(--muted)}
+.ncard[hidden]{display:none}
+#n-body{min-height:38vh;resize:vertical;line-height:1.5}
+
 /* güncelleme şeridi */
 .updbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-radius:18px;padding:12px 14px;border-color:var(--accent)}
 .updbar[hidden]{display:none}
@@ -270,8 +337,9 @@ label.f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:60
 .toast b{display:block}
 .toast button{border:0;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:8px 14px;font-weight:700}
 
-@media (max-width:430px){.dock{gap:7px;width:calc(100% - 14px)}.dock .round{width:50px;height:50px}nav.tabs{height:56px}nav.tabs button{font-size:10px}nav.tabs button svg{width:21px;height:21px}}
-@media (max-width:350px){nav.tabs button{font-size:0;gap:0}}
+@media (max-width:600px){nav.tabs button{font-size:10px}}
+/* dar ekranda 5 sekme yalnızca simgeyle; adları aria-label/title'da */
+@media (max-width:460px){.dock{gap:6px;width:calc(100% - 14px)}.dock .round{width:50px;height:50px}nav.tabs{height:56px}nav.tabs button{font-size:0;gap:0}nav.tabs button svg{width:23px;height:23px}}
 @media (max-width:400px){.stat{padding:0 10px}.stat b{font-size:17px}.ev{grid-template-columns:10px 46px 1fr auto;gap:10px}h1{font-size:28px}}
 /* geniş ekran / tam ekran: iki sütun */
 @media (min-width:980px){
@@ -308,9 +376,11 @@ label.f{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:60
   <button class="round gear" id="gear" type="button" aria-label="Ayarlar" title="Ayarlar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   <button class="round" id="editbtn" type="button" aria-label="Düzenle: etkinlik türleri" title="Etkinlik türlerini düzenle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.6a2.1 2.1 0 0 1 3 3L7.5 18.6l-4 1 1-4z"/></svg></button>
   <nav class="tabs" role="tablist" aria-label="Görünümler">
-    <button role="tab" id="tab-today" aria-selected="true" data-view="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg>Bugün</button>
-    <button role="tab" id="tab-cal" aria-selected="false" data-view="cal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3.5"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>Takvim</button>
-    <button role="tab" id="tab-cat" aria-selected="false" data-view="cat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 13.5A8.5 8.5 0 1 1 10.5 3.5v10z"/><path d="M14 3.2a8.5 8.5 0 0 1 6.8 6.8H14z"/></svg>Kategoriler</button>
+    <button role="tab" id="tab-today" aria-selected="true" data-view="today" aria-label="Bugün" title="Bugün"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg><span>Bugün</span></button>
+    <button role="tab" id="tab-cal" aria-selected="false" data-view="cal" aria-label="Takvim" title="Takvim"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3.5"/><path d="M8 3v4M16 3v4M3 10h18"/></svg><span>Takvim</span></button>
+    <button role="tab" id="tab-tasks" aria-selected="false" data-view="tasks" aria-label="Görevler" title="Görevler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="m8 12.5 2.8 2.8L16.5 9"/></svg><span>Görevler</span></button>
+    <button role="tab" id="tab-notes" aria-selected="false" data-view="notes" aria-label="Notlar" title="Notlar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14.5 3v4.5H19M9.5 12h6M9.5 16h4"/></svg><span>Notlar</span></button>
+    <button role="tab" id="tab-cat" aria-selected="false" data-view="cat" aria-label="Kategoriler" title="Kategoriler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 13.5A8.5 8.5 0 1 1 10.5 3.5v10z"/><path d="M14 3.2a8.5 8.5 0 0 1 6.8 6.8H14z"/></svg><span>Kategoriler</span></button>
   </nav>
   <button class="round fab" id="fab" type="button" aria-label="Etkinlik ekle" title="Etkinlik ekle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
 </div>
@@ -354,7 +424,7 @@ function defaultState(){
     {id:"kisisel", name:"Kişisel", color:"#d9941a", target:3}
   ];
   const ev = (off,time,title,cat,dur,rem) => ({id:uid(), title, catId:cat, date:dkey(addDays(t,off)), time, dur, remind:rem, note:"", done:false, notified:false, sample:true});
-  return {v:1, updatedAt:0, categories:cats, events:[
+  return {v:1, updatedAt:0, categories:cats, tasks:[], notes:[], events:[
     ev(0,"19:00","Mat101 tekrar","ders",90,15),
     ev(0,"21:00","Akşam yürüyüşü","spor",45,15),
     ev(1,"14:00","BMT103 lab raporu","ders",120,60),
@@ -362,7 +432,9 @@ function defaultState(){
   ]};
 }
 
-let state = loadLocal() || defaultState();
+// Sonradan eklenen listeler (görevler, notlar) eski kayıtlarda yok: boş olarak başlat.
+function normState(s){ if (!Array.isArray(s.tasks)) s.tasks = []; if (!Array.isArray(s.notes)) s.notes = []; return s; }
+let state = normState(loadLocal() || defaultState());
 (function(){ const idx = new Map(state.categories.map((c, i) => [c, i])); state.categories.sort((a, b) => ((a.order ?? 1e6) - (b.order ?? 1e6)) || (idx.get(a) - idx.get(b))); })();
 let view = "today";
 let calMonth = new Date(); calMonth.setDate(1);
@@ -411,7 +483,7 @@ function syncView(){
   el.textContent = text;
   el.classList.toggle("ok", cls === "ok");
   el.classList.toggle("err", cls === "err");
-  el.title = s && s.user ? s.user.email + (s.error ? " · " + s.error : "") : (s && s.error) || "";
+  el.title = s && s.user ? s.user.email + (s.error ? " · " + s.error : "") + (s.warn ? " · " + s.warn : "") : (s && s.error) || "";
   if (sheetMode === "settings"){
     renderAccountState();
     const p = document.querySelector("#set-backup > p");
@@ -422,7 +494,7 @@ function accountLine(){
   const s = window.ZPSync;
   if (!s || !s.configured) return "Bulut senkronu bu sürümde yapılandırılmamış; veriler yalnızca bu cihazda.";
   if (!s.user) return "Hesabına giriş yaparsan telefonun ve bilgisayarın aynı verileri görür.";
-  return "Giriş yapıldı: <b>" + esc(s.user.email) + "</b> · " + esc((SYNC_TEXT[s.status] || SYNC_TEXT.off)[0]) + (s.error ? " · " + esc(s.error) : "");
+  return "Giriş yapıldı: <b>" + esc(s.user.email) + "</b> · " + esc((SYNC_TEXT[s.status] || SYNC_TEXT.off)[0]) + (s.error ? " · " + esc(s.error) : "") + (s.warn ? "<br><span style=\"color:var(--warn)\">" + esc(s.warn) + "</span>" : "");
 }
 
 /* ---------- yardımcılar ---------- */
@@ -433,6 +505,30 @@ const endOf = e => new Date(startOf(e).getTime() + (+e.dur||0)*60000);
 const clock = d => pad(d.getHours()) + ":" + pad(d.getMinutes());
 // Şu an içinde bulunulan (başlamış, bitmemiş, tamamlanmamış) etkinlikler.
 const activeEvents = (now = new Date()) => state.events.filter(e => !e.done && startOf(e) <= now && now < endOf(e)).sort(sortEv);
+/* Etkinlik değerlendirmesi düz alanlarda tutulur (senkron iç içe nesneleri karşılaştırmaz):
+   rv: 1 Kötü · 2 İyi · 3 Verimli · 0 yapılmadı; rvMin: gerçekte ayrılan dk; rvText: ne yapıldı; rvAt: zaman damgası. */
+const RATINGS = {1:["Kötü","Odaklanamadım","var(--warn)"], 2:["İyi","İdare eder","var(--accent)"], 3:["Verimli","Çok iyi geçti","var(--good)"]};
+const reviewed = e => +e.rvAt > 0;
+const clearReview = e => { delete e.rv; delete e.rvMin; delete e.rvText; delete e.rvAt; };
+// Tamamlanan süre: değerlendirmede girilen gerçek süre, yoksa planlanan süre.
+const spentMin = e => !e.done ? 0 : (reviewed(e) && e.rv > 0 && +e.rvMin >= 0 ? +e.rvMin : (+e.dur || 0));
+const REVIEW_DAYS = 3;          // bitişten bu kadar gün sonrasına kadar değerlendirme istenir
+const AUTO_ASK_MS = 6 * 3600e3; // bundan yeni biten etkinlik için değerlendirme penceresi kendiliğinden açılır
+const pendingReviews = (now = new Date()) => state.events
+  .filter(e => !reviewed(e) && endOf(e) <= now && now - endOf(e) < REVIEW_DAYS * 864e5)
+  .sort((a, b) => endOf(a) - endOf(b));
+// Verim puanı 0–100: Kötü 0, İyi 50, Verimli 100; ayrılan süreyle ağırlıklı ortalama.
+function verimOf(evs){
+  let w = 0, sum = 0, n = 0, min = 0, skip = 0;
+  evs.forEach(e => {
+    if (!reviewed(e)) return;
+    if (!(e.rv > 0)){ skip++; return; }
+    const m = Math.max(+e.rvMin || 0, 1);
+    w += m; sum += m * (e.rv - 1) / 2; n++; min += +e.rvMin || 0;
+  });
+  return {score: n ? Math.round(sum / w * 100) : null, n, min, skip};
+}
+const verimLevel = sc => sc < 34 ? 1 : sc < 67 ? 2 : 3;
 function leftTime(ms){
   const m = Math.max(1, Math.ceil(ms/60000));
   if (m < 60) return m + " dk kaldı";
@@ -442,7 +538,7 @@ let todayKey = "";   // Bugün ekranında gösterilen aktif/sıradaki durumu; de
 const todayStateKey = (now = new Date()) => {
   const act = activeEvents(now).map(e => e.id).join(",");
   const nx = state.events.filter(e => !e.done && startOf(e) > now).sort(sortEv)[0];
-  return act + "|" + (nx ? nx.id : "") + "|" + dkey(now);
+  return act + "|" + (nx ? nx.id : "") + "|" + dkey(now) + "|" + pendingReviews(now).map(e => e.id).join(",");
 };
 function weekStats(){
   const ws = weekStart(new Date()), we = addDays(ws,7);
@@ -451,7 +547,7 @@ function weekStats(){
   state.events.forEach(e => {
     const s = startOf(e); if (s < ws || s >= we) return;
     const k = m[e.catId] || (m[e.catId] = {plan:0, done:0});
-    k.plan += +e.dur || 0; if (e.done) k.done += +e.dur || 0;
+    k.plan += +e.dur || 0; k.done += spentMin(e);
   });
   return m;
 }
@@ -479,7 +575,7 @@ function evRow(e, showDate){
     <span class="bar" style="background:${c.color}"></span>
     <span class="t">${esc(e.time)}${showDate ? `<small>${esc(e.date.slice(8))}.${esc(e.date.slice(5,7))}</small>` : `<small>${fmtDur(e.dur)}</small>`}</span>
     <span><span class="ti">${esc(e.title)}</span>
-      <span class="meta"><span>${esc(c.name)}</span>${showDate ? `<span>${fmtDur(e.dur)}</span>` : ""}${rem ? `<span>🔔 ${esc(rem)}</span>` : ""}${e.sample ? `<span class="tag">örnek</span>` : ""}</span></span>
+      <span class="meta"><span>${esc(c.name)}</span>${showDate ? `<span>${fmtDur(e.dur)}</span>` : ""}${rem && !e.done ? `<span>🔔 ${esc(rem)}</span>` : ""}${reviewed(e) ? (e.rv > 0 ? `<span class="tag"><i class="rd" style="background:${RATINGS[e.rv][2]}"></i>${RATINGS[e.rv][0]}${+e.rvMin !== +e.dur ? " · " + fmtDur(e.rvMin) : ""}</span>` : `<span class="tag">yapılmadı</span>`) : ""}${e.sample ? `<span class="tag">örnek</span>` : ""}</span></span>
     <button type="button" class="chk" data-done="${e.id}" aria-label="${e.done ? "Yapılmadı olarak işaretle" : "Tamamlandı olarak işaretle"}">✓</button>
   </div>`;
 }
@@ -488,7 +584,7 @@ function renderToday(){
   const now = new Date(), tk = dkey(now);
   const todays = state.events.filter(e => e.date === tk).sort(sortEv);
   const planToday = todays.reduce((s,e) => s + (+e.dur||0), 0);
-  const doneToday = todays.filter(e => e.done).reduce((s,e) => s + (+e.dur||0), 0);
+  const doneToday = todays.reduce((s,e) => s + spentMin(e), 0);
   const ws = weekStats();
   const weekPlan = Object.values(ws).reduce((s,x) => s + x.plan, 0);
   const weekTarget = state.categories.reduce((s,c) => s + (+c.target||0)*60, 0);
@@ -529,6 +625,8 @@ function renderToday(){
         <div class="stat"><b>${fmtH(weekPlan)}</b><span>hafta · ${fmtH(weekTarget)} hedef</span></div>
       </div>
       ${card}
+      ${pendingHtml(now)}
+      ${verimHtml(now)}
     </div>
     <div class="col">
       <section>
@@ -541,6 +639,91 @@ function renderToday(){
       </section>
     </div>
   </div>`;
+}
+
+function pendingHtml(now){
+  const pend = pendingReviews(now);
+  if (!pend.length) return "";
+  return `<section><h2>Nasıl geçti?</h2><div class="glass group">${pend.map(e => {
+    const c = catById(e.catId);
+    return `<div class="prow"><span class="bar" style="background:${c.color}"></span>
+      <span><b>${esc(e.title)}</b><small>${e.date === dkey(now) ? "Bugün" : esc(dayTitle(e.date).replace(/^(Bugün|Yarın) · /, ""))} · ${esc(e.time)}–${clock(endOf(e))} · ${esc(c.name)}</small></span>
+      <button type="button" class="btn primary sm" data-review="${e.id}">Değerlendir</button></div>`;
+  }).join("")}</div></section>`;
+}
+function scaleHtml(v){
+  if (v.score === null) return `<div class="scale empty" aria-hidden="true"><i></i><i></i><i></i></div>`;
+  return `<div class="scale" role="img" aria-label="Verim ${v.score}/100, ${RATINGS[verimLevel(v.score)][0]}"><i></i><i></i><i></i><span class="mk" style="left:${Math.min(97, Math.max(3, v.score))}%"></span></div>`;
+}
+function verimRow(label, v){
+  const sub = v.n || v.skip ? `${v.n} etkinlik${v.n ? " · " + fmtDur(v.min) : ""}${v.skip ? " · " + v.skip + " yapılmadı" : ""}` : "Henüz değerlendirme yok";
+  return `<div class="vrow"><div class="vt"><b>${label}</b>${v.score !== null ? `<span class="sc">${RATINGS[verimLevel(v.score)][0]} <span>${v.score}/100</span></span>` : ""}</div>
+    ${scaleHtml(v)}<small>${sub}</small></div>`;
+}
+function verimHtml(now){
+  const ws = weekStart(now), tk = dkey(now);
+  const inWeek = state.events.filter(e => { const s = startOf(e); return s >= ws && s < addDays(ws, 7); });
+  const day = verimOf(state.events.filter(e => e.date === tk)), week = verimOf(inWeek);
+  const days = Array.from({length: 7}, (_, i) => { const k = dkey(addDays(ws, i)); return {k, i, v: verimOf(inWeek.filter(e => e.date === k))}; });
+  const strip = days.map(d => {
+    const v = d.v, has = v.score !== null;
+    const tip = has ? `<b>${WDL[(d.i + 1) % 7]}</b>${RATINGS[verimLevel(v.score)][0]} · <span class="m">${v.score}/100</span><br>${v.n} etkinlik · ${fmtDur(v.min)}` : `<b>${WDL[(d.i + 1) % 7]}</b>Değerlendirme yok`;
+    return `<div class="c ${has ? "" : "none"} ${d.k === tk ? "today" : ""}" data-tip="${esc(tip)}"><span class="h"><i style="${has ? `height:${Math.max(8, v.score)}%;background:${RATINGS[verimLevel(v.score)][2]}` : ""}"></i></span><b>${WD[d.i]}</b></div>`;
+  }).join("");
+  const any = week.n || week.skip;
+  return `<div class="glass verim">
+    <h3>Verim skalası</h3>
+    ${any ? "" : `<p class="ph">Bir etkinlik bittiğinde ne yaptığını, ne kadar zaman ayırdığını ve verimini soracağım. Cevapların burada günlük ve haftalık verim skalana dönüşür.</p>`}
+    ${verimRow("Bugün", day)}
+    ${verimRow("Bu hafta", week)}
+    <div class="scale-l" aria-hidden="true"><span>Kötü</span><span>İyi</span><span>Verimli</span></div>
+    ${any ? `<div class="vweek" aria-label="Haftanın günlerine göre verim">${strip}</div>` : ""}
+  </div>`;
+}
+
+/* ---------- görevler (checklist) ---------- */
+function taskRow(t){
+  return `<div class="task ${t.done ? "done" : ""}">
+    <button type="button" class="chk" data-task-toggle="${t.id}" aria-label="${t.done ? "Yapılmadı olarak işaretle" : "Tamamlandı olarak işaretle"}">✓</button>
+    <button type="button" class="tt" data-task-edit="${t.id}">${esc(t.text)}</button>
+    <button type="button" class="x" data-task-del="${t.id}" aria-label="Görevi sil: ${esc(t.text)}">×</button>
+  </div>`;
+}
+function renderTasks(){
+  const open = state.tasks.filter(t => !t.done).sort((a, b) => (+a.at || 0) - (+b.at || 0));
+  const done = state.tasks.filter(t => t.done).sort((a, b) => (+b.doneAt || 0) - (+a.doneAt || 0));
+  return `<section class="narrow">
+    <form class="glass taskadd" id="task-form" autocomplete="off">
+      <input id="task-input" maxlength="200" placeholder="Yeni görev ekle…" aria-label="Yeni görev">
+      <button type="submit" class="btn primary sm">Ekle</button>
+    </form>
+    <h2>Yapılacaklar · ${open.length}</h2>
+    <div class="glass group">${open.length ? open.map(taskRow).join("") : `<div class="empty">${done.length ? "Hepsi bitti. 🎉" : "Liste boş. Yukarıdan görev ekle."}</div>`}</div>
+    ${done.length ? `<div class="secrow"><h2>Tamamlanan · ${done.length}</h2><button type="button" class="iconbtn" id="task-clear">Temizle</button></div>
+    <div class="glass group">${done.map(taskRow).join("")}</div>` : ""}
+  </section>`;
+}
+
+/* ---------- notlar ---------- */
+let noteQuery = "";
+const noteFold = s => String(s || "").toLocaleLowerCase("tr-TR");
+const fmtStamp = ms => { const d = new Date(+ms || 0), t = new Date(); return (dkey(d) === dkey(t) ? "Bugün" : d.getDate() + " " + MONTHS[d.getMonth()] + (d.getFullYear() !== t.getFullYear() ? " " + d.getFullYear() : "")) + ", " + clock(d); };
+function renderNotes(){
+  const notes = state.notes.slice().sort((a, b) => (+b.at || 0) - (+a.at || 0));
+  const q = noteFold(noteQuery);
+  const cards = notes.map(n => {
+    const title = n.title || (n.body || "").split("\n")[0] || "Başlıksız not";
+    const body = n.title ? n.body : (n.body || "").split("\n").slice(1).join("\n");
+    const hay = noteFold(n.title + " " + n.body);
+    return `<button type="button" class="glass ncard" data-note-edit="${n.id}" data-q="${esc(hay)}" ${q && !hay.includes(q) ? "hidden" : ""}>
+      <b>${esc(title)}</b>${body && body.trim() ? `<p>${esc(body.trim())}</p>` : ""}<small>${esc(fmtStamp(n.at))}</small></button>`;
+  }).join("");
+  return `<section>
+    ${notes.length > 3 ? `<input type="search" class="glass nsearch" id="note-search" placeholder="Notlarda ara…" aria-label="Notlarda ara" value="${esc(noteQuery)}">` : ""}
+    <div class="secrow"><h2>${notes.length ? notes.length + " not" : "Notlar"}</h2><button type="button" class="btn primary sm" id="note-new">+ Yeni not</button></div>
+    ${notes.length ? `<div class="notes" id="notes">${cards}</div><div class="glass group" id="notes-none" ${q && !notes.some(n => noteFold(n.title + " " + n.body).includes(q)) ? "" : "hidden"}><div class="empty">Aramayla eşleşen not yok.</div></div>`
+      : `<div class="glass group"><div class="empty">Henüz not yok. Aklındakileri buraya yaz; telefonda ve bilgisayarda aynı notları görürsün.</div></div>`}
+  </section>`;
 }
 
 /* ---------- ayarlar bölümleri ---------- */
@@ -692,7 +875,7 @@ function renderDist(){
     const k = day.m[id] || (day.m[id] = {plan:0, done:0}), w = weekTotals[id] || (weekTotals[id] = {plan:0, done:0});
     const dur = +e.dur || 0;
     k.plan += dur; w.plan += dur; day.total += dur;
-    if (e.done){ k.done += dur; w.done += dur; }
+    const sp = spentMin(e); k.done += sp; w.done += sp;
   });
   const cats = weekCats(weekTotals);
   const maxM = Math.max(...days.map(d => d.total));
@@ -709,7 +892,7 @@ function renderDist(){
     const k = dkey(day.d), dayName = WDL[day.d.getDay()];
     const segs = cats.filter(x => day.m[x.c.id || ""] && day.m[x.c.id || ""].plan > 0).map(x => {
       const s = day.m[x.c.id || ""];
-      return `<div class="sgm" style="height:${y(s.plan)}" data-tip="${esc(tipText(x.c.name, s, dayName))}"><span class="bg" style="background:${x.c.color}"></span><span class="dn" style="height:${pct(s.done, s.plan)}%;background:${x.c.color}"></span></div>`;
+      return `<div class="sgm" style="height:${y(s.plan)}" data-tip="${esc(tipText(x.c.name, s, dayName))}"><span class="bg" style="background:${x.c.color}"></span><span class="dn" style="height:${Math.min(100, pct(s.done, s.plan))}%;background:${x.c.color}"></span></div>`;
     }).join("");
     return `<div class="day ${k === tk ? "today" : ""}">${segs}${day.total ? `<span class="tot" style="bottom:${y(day.total)}">${(Math.round(day.total / 6) / 10).toLocaleString("tr-TR")}</span>` : ""}</div>`;
   }).join("");
@@ -764,15 +947,15 @@ function renderCat(){
 function render(){
   const now = new Date();
   document.getElementById("today-str").textContent = now.getDate() + " " + MONTHS[now.getMonth()] + " " + now.getFullYear() + ", " + WDL[now.getDay()];
-  document.getElementById("hello").textContent = view === "today" ? "Bugün" : view === "cal" ? "Takvim" : "Zaman dağılımı";
+  document.getElementById("hello").textContent = {today: "Bugün", cal: "Takvim", tasks: "Görevler", notes: "Notlar", cat: "Zaman dağılımı"}[view];
   document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === view)));
   const v = document.getElementById("view");
-  v.innerHTML = `<div class="stack">${view === "today" ? renderToday() : view === "cal" ? renderCal() : renderCat()}</div>`;
+  v.innerHTML = `<div class="stack">${({today: renderToday, cal: renderCal, tasks: renderTasks, notes: renderNotes, cat: renderCat})[view]()}</div>`;
 }
 
 /* ---------- etkinlik formu ---------- */
 const scrim = document.getElementById("scrim"), sheet = document.getElementById("sheet");
-let sheetMode = null, editing = null, chosenCat = null, chosenDur = 60;
+let sheetMode = null, editing = null, chosenCat = null, chosenDur = 60, chosenRate = 0, chosenSpent = 60;
 function closeSheet(){ scrim.classList.remove("open"); sheetMode = null; editing = null; }
 function openEvent(id, date){
   const e = id ? state.events.find(x => x.id === id) : null;
@@ -796,8 +979,9 @@ function openEvent(id, date){
       <label for="f-dur" style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="number" id="f-dur" min="5" max="1440" step="5" value="${chosenDur}" style="width:84px;padding:8px 10px"> dk</label></div></div>
     <label class="f" for="f-rem">Hatırlatma<select id="f-rem">${REMINDERS.map(r => `<option value="${r[0]}" ${r[0] === remind ? "selected" : ""}>${r[1]}</option>`).join("")}</select></label>
     <label class="f" for="f-note">Not<textarea id="f-note" rows="2" maxlength="300">${esc(e ? e.note : "")}</textarea></label>
+    ${e && reviewed(e) ? `<p class="rvsum">${e.rv > 0 ? `<b>${RATINGS[e.rv][0]}</b> · ${fmtDur(e.rvMin)} ayrıldı` : "<b>Yapılmadı</b>"}${e.rvText ? " · “" + esc(e.rvText) + "”" : ""}</p>` : ""}
     <div class="row" style="justify-content:space-between">
-      ${e ? `<button type="button" class="btn danger" id="f-del">Sil</button>` : "<span></span>"}
+      ${e ? `<div class="row"><button type="button" class="btn danger" id="f-del">Sil</button>${startOf(e) <= new Date() ? `<button type="button" class="btn" id="f-review">${reviewed(e) ? "Değerlendirmeyi düzenle" : "Değerlendir"}</button>` : ""}</div>` : "<span></span>"}
       <div class="row"><button type="button" class="btn" id="f-cancel">Vazgeç</button><button type="submit" class="btn primary">Kaydet</button></div>
     </div>`;
   scrim.classList.add("open");
@@ -869,6 +1053,65 @@ function openCat(id, fromTypes){
   if (!c) setTimeout(() => { const n = document.getElementById("c-name"); if (n) n.focus(); }, 50);
 }
 
+/* ---------- etkinlik bitince: ne yaptın, ne kadar sürdü, verim ---------- */
+function openReview(id){
+  const e = state.events.find(x => x.id === id); if (!e) return;
+  sheetMode = "review"; editing = e;
+  const now = new Date(), c = catById(e.catId), dur = +e.dur || 0;
+  chosenRate = reviewed(e) && e.rv > 0 ? e.rv : 0;
+  // Henüz bitmemişse (ör. "Tamamladım"a erken basıldı) varsayılan, şu ana kadar geçen süre.
+  const elapsed = now < endOf(e) ? Math.max(5, Math.round((now - startOf(e)) / 300000) * 5) : dur;
+  chosenSpent = reviewed(e) && e.rv > 0 ? +e.rvMin : Math.min(dur || elapsed, elapsed);
+  const opts = [...new Set([dur, 15, 30, 45, 60, 90, 120].filter(m => m > 0))].sort((a, b) => a - b);
+  sheet.innerHTML = `
+    <h3>Nasıl geçti?</h3>
+    <div class="rvhead"><span class="sw" style="background:${c.color};width:14px;height:14px"></span>
+      <div><b>${esc(e.title)}</b><small>${esc(dayTitle(e.date))} · ${esc(e.time)}–${clock(endOf(e))} · ${esc(c.name)}</small></div></div>
+    <label class="f" for="r-text">Bu etkinlikte ne yaptın?<textarea id="r-text" rows="3" maxlength="500" placeholder="Örn. 3. bölümün sorularını çözdüm, 2 konuyu tekrar ettim">${esc(e.rvText || "")}</textarea></label>
+    <div class="f" style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--muted)">Ne kadar zaman ayırdın?
+      <div class="chips" id="r-mins">${opts.map(m => `<button type="button" class="chip" data-spent="${m}" aria-pressed="${m === chosenSpent}">${m === dur ? "Planlandığı gibi · " : ""}${fmtDur(m)}</button>`).join("")}
+      <label for="r-min" style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="number" id="r-min" min="0" max="1440" step="5" value="${chosenSpent}" style="width:84px;padding:8px 10px;font-size:16px;border:0;background:var(--fill);border-radius:14px;color:var(--ink)"> dk</label></div></div>
+    <div class="f" style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--muted)">Verimin nasıldı?
+      <div class="rate" role="group" aria-label="Verim">${[1, 2, 3].map(r => `<button type="button" data-rate="${r}" aria-pressed="${r === chosenRate}"><span class="dot" style="background:${RATINGS[r][2]}"></span>${RATINGS[r][0]}<small>${RATINGS[r][1]}</small></button>`).join("")}</div></div>
+    <p class="hint" id="r-msg" role="status"></p>
+    <div class="row" style="justify-content:space-between">
+      <button type="button" class="btn danger" id="r-skip">Yapmadım</button>
+      <div class="row"><button type="button" class="btn" id="f-cancel">Sonra</button><button type="submit" class="btn primary">Kaydet</button></div>
+    </div>`;
+  scrim.classList.add("open");
+}
+
+/* ---------- görev & not düzenleme ---------- */
+function openTask(id){
+  const t = state.tasks.find(x => x.id === id); if (!t) return;
+  sheetMode = "task"; editing = t;
+  sheet.innerHTML = `
+    <h3>Görevi düzenle</h3>
+    <label class="f" for="t-text">Görev<input id="t-text" required maxlength="200" value="${esc(t.text)}"></label>
+    <div class="row" style="justify-content:space-between">
+      <button type="button" class="btn danger" id="t-del">Sil</button>
+      <div class="row"><button type="button" class="btn" id="f-cancel">Vazgeç</button><button type="submit" class="btn primary">Kaydet</button></div>
+    </div>`;
+  scrim.classList.add("open");
+  setTimeout(() => { const i = document.getElementById("t-text"); if (i) i.focus(); }, 50);
+}
+function openNote(id){
+  const n = id ? state.notes.find(x => x.id === id) : null;
+  sheetMode = "note"; editing = n;
+  sheet.innerHTML = `
+    <h3>${n ? "Not" : "Yeni not"}</h3>
+    <label class="f" for="n-title">Başlık<input id="n-title" maxlength="120" value="${esc(n ? n.title : "")}" placeholder="Örn. Proje fikirleri"></label>
+    <label class="f" for="n-body">Not<textarea id="n-body" maxlength="20000" placeholder="Yazmaya başla…">${esc(n ? n.body : "")}</textarea></label>
+    ${n ? `<p class="hint" style="margin:-6px 0 0">Son düzenleme: ${esc(fmtStamp(n.at))}</p>` : ""}
+    <p class="hint" id="n-msg" role="status"></p>
+    <div class="row" style="justify-content:space-between">
+      ${n ? `<button type="button" class="btn danger" id="n-del">Sil</button>` : "<span></span>"}
+      <div class="row"><button type="button" class="btn" id="f-cancel">Vazgeç</button><button type="submit" class="btn primary">Kaydet</button></div>
+    </div>`;
+  scrim.classList.add("open");
+  setTimeout(() => { const el = document.getElementById(n ? "n-body" : "n-title"); if (el) el.focus(); }, 50);
+}
+
 /* ---------- hesap & senkron formu ---------- */
 function openSettings(){
   sheetMode = "settings"; editing = null;
@@ -933,6 +1176,20 @@ sheet.addEventListener("click", ev => {
   if (t.dataset.typeUp) return moveType(t.dataset.typeUp, -1);
   if (t.dataset.typeDown) return moveType(t.dataset.typeDown, 1);
   if (t.id === "type-add") return openCat(null, true);
+  if (t.id === "f-review" && editing) return openReview(editing.id);
+  if (t.dataset.rate){ chosenRate = +t.dataset.rate; sheet.querySelectorAll("[data-rate]").forEach(b => b.setAttribute("aria-pressed", String(b === t))); document.getElementById("r-msg").textContent = ""; return; }
+  if (t.dataset.spent){ chosenSpent = +t.dataset.spent; document.getElementById("r-min").value = chosenSpent; sheet.querySelectorAll("[data-spent]").forEach(b => b.setAttribute("aria-pressed", String(b === t))); return; }
+  if (t.id === "r-skip" && editing){
+    Object.assign(editing, {rv: 0, rvMin: 0, rvText: document.getElementById("r-text").value.trim(), rvAt: Date.now(), done: false});
+    if (!state.events.includes(editing)) state.events.push(editing);
+    closeSheet(); commit(); return;
+  }
+  if (t.id === "t-del" && editing){ const id = editing.id; state.tasks = state.tasks.filter(x => x.id !== id); closeSheet(); commit(); return; }
+  if (t.id === "n-del" && editing){
+    if (t.dataset.confirm){ const id = editing.id; state.notes = state.notes.filter(x => x.id !== id); closeSheet(); commit(); }
+    else { t.dataset.confirm = "1"; t.textContent = "Silmek için tekrar dokun"; }
+    return;
+  }
   if (t.id === "a-signup") return accountAction("signup");
   if (t.id === "a-reset") return accountAction("reset");
   if (t.id === "a-signout") return accountAction("signout");
@@ -961,11 +1218,31 @@ sheet.addEventListener("change", ev => {
   if (ev.target.id === "restore-file" && ev.target.files && ev.target.files[0]) importBackup(ev.target.files[0]);
 });
 sheet.addEventListener("input", ev => {
+  if (ev.target.id === "r-min"){ chosenSpent = Math.max(0, +ev.target.value || 0); sheet.querySelectorAll("[data-spent]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.spent === chosenSpent))); }
   if (ev.target.id === "f-dur"){ chosenDur = +ev.target.value || 0; sheet.querySelectorAll("[data-dur]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.dur === chosenDur))); }
 });
 sheet.addEventListener("submit", ev => {
   ev.preventDefault();
   if (sheetMode === "settings"){ if (document.getElementById("a-email")) accountAction("signin"); return; }
+  if (sheetMode === "review"){
+    if (!chosenRate){ document.getElementById("r-msg").textContent = "Verimini seç: Kötü, İyi ya da Verimli."; return; }
+    const mins = Math.max(0, Math.min(1440, Math.round(+document.getElementById("r-min").value || 0)));
+    Object.assign(editing, {rv: chosenRate, rvMin: mins, rvText: document.getElementById("r-text").value.trim(), rvAt: Date.now(), done: true});
+    if (!state.events.includes(editing)) state.events.push(editing);
+    closeSheet(); commit(); return;
+  }
+  if (sheetMode === "task"){
+    const text = document.getElementById("t-text").value.trim(); if (!text) return;
+    editing.text = text; if (!state.tasks.includes(editing)) state.tasks.push(editing);
+    closeSheet(); commit(); return;
+  }
+  if (sheetMode === "note"){
+    const title = document.getElementById("n-title").value.trim(), body = document.getElementById("n-body").value.replace(/\s+$/, "");
+    if (!title && !body.trim()){ document.getElementById("n-msg").textContent = "Boş not kaydedilmez."; return; }
+    if (editing){ if (editing.title !== title || editing.body !== body) Object.assign(editing, {title, body, at: Date.now()}); if (!state.notes.includes(editing)) state.notes.push(editing); }
+    else state.notes.push({id: uid(), title, body, at: Date.now()});
+    closeSheet(); commit(); return;
+  }
   if (sheetMode === "event"){
     const title = document.getElementById("f-title").value.trim();
     const date = document.getElementById("f-date").value, time = document.getElementById("f-time").value;
@@ -989,7 +1266,8 @@ sheet.addEventListener("submit", ev => {
   closeSheet(); commit();
   if (back) openTypes();
 });
-scrim.addEventListener("click", ev => { if (ev.target === scrim) closeSheet(); });
+// Not ve değerlendirme yazılırken yanlışlıkla dışarı dokununca yazılanlar kaybolmasın.
+scrim.addEventListener("click", ev => { if (ev.target === scrim && sheetMode !== "note" && sheetMode !== "review") closeSheet(); });
 document.addEventListener("keydown", ev => {
   if (ev.key !== "Escape") return;
   if (scrim.classList.contains("open")) closeSheet();
@@ -998,12 +1276,37 @@ document.addEventListener("keydown", ev => {
 
 /* ---------- ana tıklamalar ---------- */
 document.querySelector("nav.tabs").addEventListener("click", ev => { const b = ev.target.closest("button"); if (b){ view = b.dataset.view; render(); } });
-document.getElementById("fab").addEventListener("click", () => openEvent(null, view === "cal" ? selDay : null));
+document.getElementById("fab").addEventListener("click", () => {
+  if (view === "notes") return openNote(null);
+  if (view === "tasks"){ const i = document.getElementById("task-input"); if (i) i.focus(); return; }
+  openEvent(null, view === "cal" ? selDay : null);
+});
 document.getElementById("gear").addEventListener("click", openSettings);
 document.getElementById("editbtn").addEventListener("click", openTypes);
 document.getElementById("view").addEventListener("click", ev => {
   const done = ev.target.closest("[data-done]");
-  if (done){ ev.stopPropagation(); const e = state.events.find(x => x.id === done.dataset.done); if (e){ e.done = !e.done; commit(); } return; }
+  if (done){
+    ev.stopPropagation();
+    const e = state.events.find(x => x.id === done.dataset.done);
+    if (!e) return;
+    // Başlamış bir etkinliği tamamlamak değerlendirmeyi açar; geri almak değerlendirmeyi siler.
+    if (!e.done && startOf(e) <= new Date()) return openReview(e.id);
+    if (e.done) clearReview(e);
+    e.done = !e.done; commit(); return;
+  }
+  const tk = ev.target.closest("[data-task-toggle], [data-task-del], [data-task-edit], [data-note-edit], [data-review], #task-clear, #note-new");
+  if (tk){
+    const d = tk.dataset;
+    if (d.review) return openReview(d.review);
+    if (d.noteEdit) return openNote(d.noteEdit);
+    if (tk.id === "note-new") return openNote(null);
+    if (d.taskEdit) return openTask(d.taskEdit);
+    if (tk.id === "task-clear"){ state.tasks = state.tasks.filter(t => !t.done); commit(); return; }
+    const t = state.tasks.find(x => x.id === (d.taskToggle || d.taskDel)); if (!t) return;
+    if (d.taskDel) state.tasks = state.tasks.filter(x => x !== t);
+    else { t.done = !t.done; if (t.done) t.doneAt = Date.now(); else delete t.doneAt; }
+    commit(); return;
+  }
   const b = ev.target.closest("button, [data-edit]"); if (!b) return;
   if (b.dataset.edit) return openEvent(b.dataset.edit);
   if (b.dataset.day){ selDay = b.dataset.day; render(); return; }
@@ -1013,6 +1316,21 @@ document.getElementById("view").addEventListener("click", ev => {
   if (b.id === "next"){ calMonth.setMonth(calMonth.getMonth()+1); render(); }
   if (b.id === "add-on-day") openEvent(null, selDay);
   if (b.id === "add-cat") openCat(null);
+});
+document.getElementById("view").addEventListener("submit", ev => {
+  if (ev.target.id !== "task-form") return;
+  ev.preventDefault();
+  const inp = document.getElementById("task-input"), text = inp.value.trim();
+  if (!text) return;
+  state.tasks.push({id: uid(), text, done: false, at: Date.now()});
+  commit();
+  const ni = document.getElementById("task-input"); if (ni) ni.focus();
+});
+document.getElementById("view").addEventListener("input", ev => {
+  if (ev.target.id !== "note-search") return;
+  noteQuery = ev.target.value; const q = noteFold(noteQuery); let any = false;
+  document.querySelectorAll("#notes [data-q]").forEach(c => { const hit = !q || c.dataset.q.includes(q); c.hidden = !hit; any = any || hit; });
+  const none = document.getElementById("notes-none"); if (none) none.hidden = any;
 });
 /* grafik ipucu: farede üzerine gelince, dokunmatikte dokununca */
 const ctip = document.getElementById("ctip");
@@ -1062,11 +1380,30 @@ function checkReminders(){
     }
   });
   if (changed){ commit(); showNext(); }
+  autoReview(now);
   document.querySelectorAll("[data-countdown]").forEach(el => el.textContent = relTime(+el.dataset.countdown - now));
   document.querySelectorAll("[data-remaining]").forEach(el => el.textContent = leftTime(+el.dataset.remaining - now));
   document.querySelectorAll("[data-prog]").forEach(el => { const [a, b] = el.dataset.prog.split(",").map(Number); el.style.width = Math.min(100, Math.max(0, (now - a) / (b - a) * 100)).toFixed(1) + "%"; });
   // Bir etkinlik başladıysa ya da bittiyse "Aktif" / "Sıradaki" kartını yenile.
   if (view === "today" && todayStateKey(new Date(now)) !== todayKey) render();
+}
+/* Biten etkinlik için değerlendirmeyi bir kez kendiliğinden aç (bu cihazda); sonra "Nasıl geçti?" kartında bekler. */
+const ASKED_KEY = "zaman-planlayici-asked";
+let asked = (() => { try { return new Set(JSON.parse(localStorage.getItem(ASKED_KEY) || "[]")); } catch(e){ return new Set(); } })();
+function markAsked(id){ asked.add(id); try { localStorage.setItem(ASKED_KEY, JSON.stringify([...asked].slice(-300))); } catch(e){} }
+function autoReview(now){
+  if (scrim.classList.contains("open")) return;
+  const e = pendingReviews(new Date(now)).find(x => !asked.has(x.id) && now - endOf(x) < AUTO_ASK_MS);
+  if (!e) return;
+  markAsked(e.id);
+  sysNotify("Bitti: " + e.title, "Nasıl geçti? Ne yaptığını ve verimini kaydet.", "rv-" + e.id);
+  openReview(e.id);
+}
+function sysNotify(title, body, tag){
+  if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  const opts = {body, tag, icon: "icons/icon-192.png"};
+  if (swReg && swReg.showNotification){ swReg.showNotification(title, opts).catch(() => {}); return; }
+  try { const n = new Notification(title, opts); n.onclick = () => { if (window.desktop) window.desktop.show(); else window.focus(); }; } catch(err){}
 }
 function notify(e){
   if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
@@ -1213,8 +1550,8 @@ function importBackup(file){
       const o = JSON.parse(String(reader.result));
       const s = o && o.state ? o.state : o;
       if (!s || !Array.isArray(s.events) || !Array.isArray(s.categories)) throw new Error("Bu dosya bir Zaman Planlayıcı yedeği değil.");
-      if (!confirm(s.events.length + " etkinlik ve " + s.categories.length + " kategori yüklenecek. Bu cihazdaki mevcut verilerin" + (window.ZPSync && window.ZPSync.user ? " (ve hesabındakilerin)" : "") + " yerini alacak. Devam edilsin mi?")){ msg.textContent = "Geri yükleme iptal edildi."; return; }
-      state = Object.assign({v: 1}, s);
+      if (!confirm(s.events.length + " etkinlik, " + s.categories.length + " kategori" + (Array.isArray(s.tasks) ? ", " + s.tasks.length + " görev" : "") + (Array.isArray(s.notes) ? ", " + s.notes.length + " not" : "") + " yüklenecek. Bu cihazdaki mevcut verilerin" + (window.ZPSync && window.ZPSync.user ? " (ve hesabındakilerin)" : "") + " yerini alacak. Devam edilsin mi?")){ msg.textContent = "Geri yükleme iptal edildi."; return; }
+      state = normState(Object.assign({v: 1}, s));
       commit();
       const m = document.getElementById("backup-msg"); if (m) m.textContent = "Yedek geri yüklendi.";
     } catch(e){ msg.textContent = "Yedek okunamadı: " + (e && e.message || e); }

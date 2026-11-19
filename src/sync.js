@@ -1,6 +1,9 @@
 /* Zaman Planlayıcı · bulut senkronu (Firebase Auth + Firestore)
  *
- * Veri modeli: users/{uid}/events/{id} ve users/{uid}/categories/{id}.
+ * Veri modeli: users/{uid}/{tür}/{id}; türler: events, categories, tasks (görevler), notes (notlar).
+ * events ve categories "çekirdek" türlerdir: ilk eşitleme onların bulut yanıtını bekler. tasks ve notes
+ * sonradan eklendi; bulut kuralları onlara henüz izin vermiyorsa yalnızca o türler cihazda kalır
+ * (çekirdek senkron etkilenmez) ve kurallar güncellenince bir sonraki açılışta buluta gönderilir.
  * Her belge bir öğedir + updatedAt (ms) + deleted (silinenler için iz kaydı).
  * Çakışma kuralı öğe bazında "son değişiklik kazanır": iki cihaz farklı öğeleri
  * değiştirirse ikisi de korunur; aynı öğeyi değiştirirlerse en son yapılan geçerli olur.
@@ -11,7 +14,8 @@
 import config from "./firebase-config.js";
 
 const ZP = window.ZP;
-const KINDS = ["events", "categories"];
+const KINDS = ["events", "categories", "tasks", "notes"];
+const CORE = ["events", "categories"];
 const BASE_KEY = uid => "zaman-planlayici-sync-base-" + uid;
 
 const listeners = new Set();
@@ -21,6 +25,7 @@ const api = {
   user: null,
   status: config ? "signed-out" : "off",   // off | signed-out | connecting | synced | pending | offline | error
   error: "",
+  warn: "",                                 // çekirdek dışı türler eşitlenemiyorsa açıklama
   onChange(fn){ listeners.add(fn); return () => listeners.delete(fn); },
   push: () => {},
   signIn: async () => { throw new Error("Senkron yapılandırılmadı."); },
@@ -67,6 +72,7 @@ async function start(){
   fb.onAuthStateChanged(auth, user => {
     if (session) { session.stop(); session = null; }
     api.user = user ? { uid: user.uid, email: user.email } : null;
+    api.warn = "";
     if (!user) { setStatus("signed-out"); return; }
     session = openSession(fb, db, user.uid);
   });
@@ -78,25 +84,40 @@ async function start(){
 /* ---------- bir kullanıcının senkron oturumu ---------- */
 function openSession(fb, db, uid){
   // base: buluttaki (bildiğimiz) hâl; id → öğenin JSON'u. Yerel durumla farkı bulmak için kullanılır.
-  const base = { events: new Map(), categories: new Map() };
+  const base = Object.fromEntries(KINDS.map(k => [k, new Map()]));
+  const hadKind = {};                       // bu tür için daha önce bulutla eşitlenmiş bir hâl var mı
   let hadBase = false;
   try {
     const saved = JSON.parse(localStorage.getItem(BASE_KEY(uid)) || "null");
-    if (saved) { for (const k of KINDS) for (const [id, j] of Object.entries(saved[k] || {})) base[k].set(id, j); hadBase = true; }
+    if (saved) {
+      for (const k of KINDS) if (saved[k]) { hadKind[k] = true; for (const [id, j] of Object.entries(saved[k])) base[k].set(id, j); }
+      hadBase = true;
+    }
   } catch (e) {}
   const saveBase = () => {
     try {
-      localStorage.setItem(BASE_KEY(uid), JSON.stringify({ events: Object.fromEntries(base.events), categories: Object.fromEntries(base.categories) }));
+      localStorage.setItem(BASE_KEY(uid), JSON.stringify(Object.fromEntries(KINDS.map(k => [k, Object.fromEntries(base[k])]))));
     } catch (e) {}
   };
 
   // İlk kez senkronlanan cihazda, buluttan gerçek (önbellek olmayan) yanıt gelmeden hiçbir şey yazma:
   // yoksa boş önbellek "bulut boş" sanılır ve yerel varsayılanlar buluttakilerin üstüne yazılır.
-  const loaded = { events: false, categories: false };
+  const loaded = Object.fromEntries(KINDS.map(k => [k, false]));
   let ready = hadBase;
-  const pendingByKind = { events: false, categories: false };
-  const fromCacheByKind = { events: true, categories: true };
+  const pendingByKind = Object.fromEntries(KINDS.map(k => [k, false]));
+  const fromCacheByKind = Object.fromEntries(KINDS.map(k => [k, true]));
+  const blocked = {};                       // bulut kurallarının izin vermediği (çekirdek dışı) türler
   const unsubs = [];
+  // Bir tür yazılabilir mi: çekirdek türler ilk eşitlemeden sonra; diğerleri ayrıca kendi bulut yanıtı gelince.
+  const kindReady = k => ready && !blocked[k] && (CORE.includes(k) || hadKind[k] || loaded[k]);
+  function blockKind(kind){
+    if (blocked[kind]) return;
+    blocked[kind] = true;
+    // Buluta ulaşmamış öğeler "gönderildi" sayılmasın: kurallar düzelince hepsi yeniden gönderilir.
+    base[kind].clear(); hadKind[kind] = true; saveBase();
+    api.warn = "Görevler ve notlar şimdilik yalnızca bu cihazda: Firebase güvenlik kurallarının güncellenmesi gerekiyor.";
+    refresh(); emit();
+  }
 
   setStatus("connecting");
 
@@ -107,12 +128,14 @@ function openSession(fb, db, uid){
       fromCacheByKind[kind] = snap.metadata.fromCache;
       const changes = snap.docChanges().filter(c => c.type !== "removed");
       if (changes.length) applyRemote(kind, changes.map(c => ({ id: c.doc.id, data: c.doc.data() })));
+      const first = !snap.metadata.fromCache && !loaded[kind];
       if (!snap.metadata.fromCache) loaded[kind] = true;
-      if (!ready && loaded.events && loaded.categories) { ready = true; firstSync(); }
-      else if (ready && changes.length) push();
+      if (!ready && CORE.every(k => loaded[k])) { ready = true; firstSync(); }
+      else if (ready && (changes.length || first)) push();
       refresh();
     }, err => {
       console.error("Firestore dinleme hatası", err);
+      if (!CORE.includes(kind)) { blockKind(kind); return; }
       setStatus("error", err && err.code === "permission-denied" ? "Buluttaki veriye erişim izni yok (güvenlik kuralları)." : "Bulutla bağlantı kurulamadı.");
     }));
   }
@@ -124,7 +147,7 @@ function openSession(fb, db, uid){
 
   function applyRemote(kind, docs){
     const state = ZP.state();
-    const list = state[kind];
+    const list = state[kind] || (state[kind] = []);
     let changed = false;
     for (const { id, data } of docs) {
       const remoteAt = +data.updatedAt || 0;
@@ -169,8 +192,9 @@ function openSession(fb, db, uid){
     const now = Date.now();
     const writes = [];
     for (const kind of KINDS) {
+      if (!kindReady(kind)) continue;
       const seen = new Set();
-      for (const item of state[kind]) {
+      for (const item of state[kind] || []) {
         if (!item || !item.id || item.sample) continue;   // örnek etkinlikler buluta gitmez
         seen.add(item.id);
         const j = itemJson(item);
@@ -190,14 +214,19 @@ function openSession(fb, db, uid){
     if (!writes.length) return;
     ZP.saveLocal();
     saveBase();
-    for (let i = 0; i < writes.length; i += 400) {
-      const batch = fb.writeBatch(db);
-      for (const [kind, id, data] of writes.slice(i, i + 400)) batch.set(fb.doc(db, "users", uid, kind, id), data);
-      // Çevrimdışıyken yazma kuyruğa alınır; bağlantı gelince Firestore kendisi gönderir.
-      batch.commit().catch(e => {
-        console.error("Bulut yazma hatası", e);
-        setStatus("error", e && e.code === "permission-denied" ? "Buluta yazma izni yok (güvenlik kuralları)." : "Buluta yazılamadı.");
-      });
+    // Türlere ayrı paketler: kuralların henüz izin vermediği bir tür, diğerlerinin yazılmasını engellemesin.
+    for (const kind of KINDS) {
+      const kw = writes.filter(w => w[0] === kind);
+      for (let i = 0; i < kw.length; i += 400) {
+        const batch = fb.writeBatch(db);
+        for (const [, id, data] of kw.slice(i, i + 400)) batch.set(fb.doc(db, "users", uid, kind, id), data);
+        // Çevrimdışıyken yazma kuyruğa alınır; bağlantı gelince Firestore kendisi gönderir.
+        batch.commit().catch(e => {
+          console.error("Bulut yazma hatası", kind, e);
+          if (!CORE.includes(kind) && e && e.code === "permission-denied") { blockKind(kind); return; }
+          setStatus("error", e && e.code === "permission-denied" ? "Buluta yazma izni yok (güvenlik kuralları)." : "Buluta yazılamadı.");
+        });
+      }
     }
     setStatus("pending");
   }
@@ -206,7 +235,7 @@ function openSession(fb, db, uid){
     if (api.status === "error") return;
     if (!ready) return setStatus(manualOffline || navigator.onLine === false ? "offline" : "connecting");
     const off = manualOffline || navigator.onLine === false;
-    if (pendingByKind.events || pendingByKind.categories) return setStatus(off ? "offline" : "pending");
+    if (KINDS.some(k => !blocked[k] && pendingByKind[k])) return setStatus(off ? "offline" : "pending");
     if (off || fromCacheByKind.events || fromCacheByKind.categories) return setStatus("offline");
     setStatus("synced");
   }
