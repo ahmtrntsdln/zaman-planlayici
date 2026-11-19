@@ -1,5 +1,5 @@
 "use strict";
-const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, dialog, nativeTheme, session, shell } = require("electron");
+const { app, BrowserWindow, Tray, Menu, Notification, ipcMain, dialog, nativeTheme, session, shell, screen } = require("electron");
 const path = require("path");
 const fs = require("fs");
 
@@ -49,6 +49,37 @@ function setAutostart(on) {
   }
 }
 
+/* ---------- pencere durumu (boyut, konum, tam ekran) ---------- */
+const STATE_FILE = path.join(app.getPath("userData"), "window.json");
+function loadWinState() {
+  try {
+    const st = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+    // Kaydedilen konum artık bağlı bir ekranda değilse yalnızca boyutu kullan.
+    if (Number.isFinite(st.x) && Number.isFinite(st.y)) {
+      const visible = screen.getAllDisplays().some(d => { const a = d.workArea; return st.x >= a.x - 50 && st.y >= a.y - 50 && st.x < a.x + a.width - 100 && st.y < a.y + a.height - 100; });
+      if (!visible) { delete st.x; delete st.y; }
+    }
+    return st;
+  } catch (e) { return {}; }
+}
+let saveTimer = null;
+function saveWinState() {
+  if (!win) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    if (!win) return;
+    const full = win.isFullScreen(), max = win.isMaximized();
+    let prev = {}; try { prev = JSON.parse(fs.readFileSync(STATE_FILE, "utf8")); } catch (e) {}
+    const b = (full || max) ? prev : win.getBounds();   // tam ekran/büyütülmüşken normal boyutu koru
+    try { fs.writeFileSync(STATE_FILE, JSON.stringify({ x: b.x, y: b.y, width: b.width, height: b.height, maximized: max, fullscreen: full })); } catch (e) {}
+  }, 400);
+}
+function setFullScreen(on) {
+  if (!win) return;
+  if (!win.isVisible()) showWindow();
+  win.setFullScreen(typeof on === "boolean" ? on : !win.isFullScreen());
+}
+
 /* ---------- pencere ---------- */
 function showWindow() {
   if (!win) return createWindow(true);
@@ -58,16 +89,18 @@ function showWindow() {
 }
 
 function createWindow(show) {
+  const ws = loadWinState();
   win = new BrowserWindow({
-    width: 480,
-    height: 860,
+    width: ws.width || 480,
+    height: ws.height || 860,
+    x: ws.x, y: ws.y,
     minWidth: 360,
     minHeight: 520,
     show: false,
     title: APP_NAME,
     icon: path.join(BUILD, "icon.png"),
     autoHideMenuBar: true,
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#11141b" : "#f3f4f7",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#090b10" : "#eef0f5",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -80,7 +113,16 @@ function createWindow(show) {
   });
 
   win.loadFile(path.join(updater.activeDir(), "index.html"));
-  if (show) win.once("ready-to-show", () => win.show());
+  win.once("ready-to-show", () => {
+    if (ws.maximized) win.maximize();
+    if (ws.fullscreen) win.setFullScreen(true);
+    if (show) win.show();
+  });
+  for (const ev of ["resize", "move", "maximize", "unmaximize"]) win.on(ev, saveWinState);
+  for (const ev of ["enter-full-screen", "leave-full-screen"]) win.on(ev, () => {
+    saveWinState();
+    if (win) win.webContents.send("win:fullscreen", win.isFullScreen());
+  });
 
   // Kapat düğmesi uygulamayı kapatmaz, tepsiye gizler; hatırlatmalar sürer.
   win.on("close", (e) => {
@@ -146,6 +188,8 @@ function createMenu() {
         { role: "zoomIn", label: "Yakınlaştır" },
         { role: "zoomOut", label: "Uzaklaştır" },
         { role: "resetZoom", label: "Gerçek boyut" },
+        { type: "separator" },
+        { label: "Tam ekran", accelerator: "F11", click: () => setFullScreen() },
         { type: "separator" },
         { role: "toggleDevTools", label: "Geliştirici araçları" }
       ]
@@ -241,6 +285,8 @@ ipcMain.handle("save-file", async (_e, filename, text, ext) => {
   return { saved: true, path: filePath };
 });
 ipcMain.on("show-window", showWindow);
+ipcMain.handle("win:get-fullscreen", () => !!(win && win.isFullScreen()));
+ipcMain.on("win:set-fullscreen", (_e, on) => setFullScreen(on));
 ipcMain.handle("update:info", () => Object.assign(updater.info(), { pending: updater.summary() }));
 ipcMain.handle("update:check", async () => { const sum = await updater.check(); setPending(sum); return sum; });
 ipcMain.handle("update:apply", () => applyAndReload());
