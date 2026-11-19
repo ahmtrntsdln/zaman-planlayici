@@ -1,0 +1,52 @@
+{
+  "name": "zaman-planlayici",
+  "productName": "Zaman Planlayıcı",
+  "version": "1.0.0",
+  "description": "Kategorili zaman planlayıcı ve takvim",
+  "main": "electron/main.js",
+  "author": "ahmtrntsdln",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --linux AppImage"
+  },
+  "devDependencies": {
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/ibm-plex-sans": "^5.3.0",
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.ahmtrntsdln.zamanplanlayici",
+    "productName": "Zaman Planlayıcı",
+    "executableName": "zaman-planlayici",
+    "artifactName": "zaman-planlayici-${version}-${arch}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**",
+      "src/**",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "build/icon.png",
+      "category": "Office",
+      "synopsis": "Kategorili zaman planlayıcı ve takvim",
+      "desktop": {
+        "entry": {
+          "Name": "Zaman Planlayıcı",
+          "Keywords": "takvim;planlayıcı;calendar;"
+        }
+      },
+      "syncDesktopName": true
+    }
+  },
+  "desktopName": "zaman-planlayici.desktop"
+}

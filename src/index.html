@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zaman Planlayıcı</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; worker-src 'self'; manifest-src 'self'">
+<link href="fonts.css" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Planlayıcı">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#f3f4f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#11141b" media="(prefers-color-scheme: dark)">
+<style>
+/* Plan: tek sütunlu mobil uygulama; üstte sekmeler, kartlar zaman çizelgesi gibi sol renk şeridiyle kategoriyi gösterir; safran vurgu. */
+:root{
+  --bg:#f3f4f7; --surface:#ffffff; --ink:#161a24; --muted:#636a7c; --line:#dde0e8;
+  --accent:#d9941a; --accent-ink:#1b1405; --soft:#eceef3;
+  --good:#2e9a62; --warn:#c9542e;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11141b; --surface:#1a1e28; --ink:#eef0f5; --muted:#99a0b2; --line:#2b3040;
+    --accent:#f0ad35; --accent-ink:#1b1405; --soft:#232836; --good:#4cc286; --warn:#ef7a52;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11141b; --surface:#1a1e28; --ink:#eef0f5; --muted:#99a0b2; --line:#2b3040;
+  --accent:#f0ad35; --accent-ink:#1b1405; --soft:#232836; --good:#4cc286; --warn:#ef7a52;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:640px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(110px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));display:flex;flex-direction:column;gap:16px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-size:26px;margin:0;line-height:1.1;text-wrap:balance}
+.sub{color:var(--muted);font-size:13px}
+.sync{font-size:12px;padding:4px 10px;border-radius:99px;background:var(--soft);color:var(--muted);white-space:nowrap}
+.sync.ok{color:var(--good)}
+nav.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--soft);padding:4px;border-radius:12px;position:sticky;top:calc(8px + env(safe-area-inset-top));z-index:5}
+nav.tabs button{border:0;background:transparent;padding:9px 6px;border-radius:9px;font-weight:600;color:var(--muted)}
+nav.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+h2{font-family:var(--display);font-size:18px;margin:0 0 8px;text-wrap:balance}
+section{display:flex;flex-direction:column;gap:10px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.tile b{display:block;font-family:var(--mono);font-size:19px;font-variant-numeric:tabular-nums}
+.tile span{font-size:12px;color:var(--muted)}
+.next{background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.next small{font-weight:600;opacity:.75;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+.next strong{font-family:var(--display);font-size:20px}
+.next .cd{font-family:var(--mono);font-size:14px}
+.list{display:flex;flex-direction:column;gap:8px}
+.ev{display:grid;grid-template-columns:4px 56px 1fr auto;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px 10px 0;overflow:hidden;text-align:left;width:100%}
+.ev .bar{align-self:stretch;border-radius:0 3px 3px 0}
+.ev .t{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+.ev .t small{display:block;color:var(--muted);font-size:11px}
+.ev .ti{font-weight:600;overflow-wrap:anywhere}
+.ev .meta{font-size:12px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
+.ev.done .ti{text-decoration:line-through;color:var(--muted)}
+.chk{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);background:transparent;display:grid;place-items:center;font-size:14px;color:transparent}
+.ev.done .chk{background:var(--good);border-color:var(--good);color:#fff}
+.tag{font-size:11px;padding:1px 7px;border-radius:99px;background:var(--soft);color:var(--muted)}
+.empty{color:var(--muted);font-size:14px;padding:14px;border:1px dashed var(--line);border-radius:12px;text-align:center}
+.daylabel{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:6px}
+/* takvim */
+.monthbar{display:flex;align-items:center;justify-content:space-between}
+.monthbar button{border:1px solid var(--line);background:var(--surface);border-radius:10px;width:38px;height:38px;font-size:18px}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.grid .wd{font-size:11px;color:var(--muted);text-align:center;font-weight:600;padding-bottom:2px}
+.cell{aspect-ratio:1/1.05;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:4px;display:flex;flex-direction:column;align-items:center;gap:3px;font-variant-numeric:tabular-nums}
+.cell.out{opacity:.4}
+.cell.today{border-color:var(--accent);border-width:2px}
+.cell.sel{background:var(--ink);color:var(--bg)}
+.cell .dots{display:flex;gap:2px;flex-wrap:wrap;justify-content:center}
+.cell .dots i{width:6px;height:6px;border-radius:50%;display:block}
+/* kategoriler */
+.cat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.cat .top{display:flex;align-items:center;gap:10px}
+.sw{width:14px;height:14px;border-radius:4px;flex:none}
+.cat .name{font-weight:600;flex:1}
+.cat .nums{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+.track{height:10px;background:var(--soft);border-radius:99px;position:relative;overflow:hidden}
+.track .pl{position:absolute;inset:0 auto 0 0;border-radius:99px;opacity:.35}
+.track .dn{position:absolute;inset:0 auto 0 0;border-radius:99px}
+.cat .note{font-size:12px;color:var(--muted)}
+.cat .note.over{color:var(--warn)}
+.iconbtn{border:0;background:transparent;color:var(--muted);padding:4px 6px;border-radius:8px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--surface);padding:9px 14px;border-radius:10px;font-weight:600}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--warn)}
+.fab{position:fixed;right:max(calc(16px + env(safe-area-inset-right)),calc(50% - 304px));bottom:calc(22px + env(safe-area-inset-bottom));background:var(--accent);color:var(--accent-ink);border:0;border-radius:16px;padding:14px 20px;font-weight:700;font-size:16px;box-shadow:0 6px 18px rgba(0,0,0,.25);z-index:10}
+.tools{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.tools p{margin:0;font-size:13px;color:var(--muted)}
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(10,12,18,.5);display:none;z-index:20;align-items:flex-end;justify-content:center}
+.scrim.open{display:flex}
+.sheet{background:var(--surface);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px}
+.sheet h3{font-family:var(--display);margin:0;font-size:20px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:600;color:var(--muted)}
+.f input,.f select,.f textarea{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px;font-weight:400;color:var(--ink);width:100%;font-size:16px}
+#f-dur{font-size:16px}
+.f input[type="date"],.f input[type="time"]{-webkit-appearance:none;appearance:none;min-height:44px;text-align:left}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--bg);padding:7px 12px;border-radius:99px;font-size:14px;display:flex;align-items:center;gap:6px}
+.chip[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.hint{font-size:12px;color:var(--muted);min-height:1em}
+.toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translateX(-50%);width:min(600px,calc(100% - 24px));background:var(--ink);color:var(--bg);border-radius:14px;padding:12px 14px;display:none;gap:10px;align-items:center;z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.toast.show{display:flex}
+.toast .msg{flex:1}
+.toast b{display:block}
+.toast button{border:0;background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:6px 10px;font-weight:700}
+@media (max-width:400px){.tiles{grid-template-columns:1fr 1fr 1fr}.tile b{font-size:16px}.ev{grid-template-columns:4px 48px 1fr auto}}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.6}}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1 id="hello">Bugün</h1>
+      <div class="sub" id="today-str"></div>
+    </div>
+    <span class="sync" id="sync">Bu cihazda kayıtlı</span>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-today" aria-selected="true" data-view="today">Bugün</button>
+    <button role="tab" id="tab-cal" aria-selected="false" data-view="cal">Takvim</button>
+    <button role="tab" id="tab-cat" aria-selected="false" data-view="cat">Kategoriler</button>
+  </nav>
+
+  <main id="view"></main>
+</div>
+
+<button class="fab" id="fab" type="button">+ Etkinlik</button>
+
+<div class="toast" id="toast" role="alert"><div class="msg" id="toast-msg"></div><button type="button" id="toast-ok">Tamam</button></div>
+
+<div class="scrim" id="scrim">
+  <form class="sheet" id="sheet" autocomplete="off"></form>
+</div>
+
+<script>
+(function(){
+"use strict";
+const LS_KEY = "zaman-planlayici-v1";
+const pad = n => String(n).padStart(2,"0");
+const dkey = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const weekStart = d => { const x = new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x; };
+const fmtDur = m => { m = Math.round(m); const h = Math.floor(m/60), r = m%60; return h ? (r ? h+" sa "+r+" dk" : h+" sa") : r+" dk"; };
+const fmtH = m => (Math.round(m/6)/10).toLocaleString("tr-TR")+" sa";
+const MONTHS = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+const WD = ["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
+const WDL = ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+const REMINDERS = [[-1,"Yok"],[5,"5 dk önce"],[15,"15 dk önce"],[30,"30 dk önce"],[60,"1 saat önce"],[180,"3 saat önce"],[1440,"1 gün önce"]];
+const COLORS = ["#3b6fe0","#d9941a","#2e9a62","#c9542e","#8a56d6","#1f9fb0","#d64f8a","#6b7280"];
+const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const IS_STANDALONE = (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+const IS_WEB = /^https?:$/.test(location.protocol);
+let swReg = null;
+
+function defaultState(){
+  const t = new Date();
+  const cats = [
+    {id:"ders", name:"Ders & Çalışma", color:"#3b6fe0", target:20},
+    {id:"proje", name:"Proje", color:"#8a56d6", target:8},
+    {id:"spor", name:"Spor & Sağlık", color:"#2e9a62", target:4},
+    {id:"sosyal", name:"Sosyal", color:"#d64f8a", target:5},
+    {id:"kisisel", name:"Kişisel", color:"#d9941a", target:3}
+  ];
+  const ev = (off,time,title,cat,dur,rem) => ({id:uid(), title, catId:cat, date:dkey(addDays(t,off)), time, dur, remind:rem, note:"", done:false, notified:false, sample:true});
+  return {v:1, updatedAt:0, categories:cats, events:[
+    ev(0,"19:00","Mat101 tekrar","ders",90,15),
+    ev(0,"21:00","Akşam yürüyüşü","spor",45,15),
+    ev(1,"14:00","BMT103 lab raporu","ders",120,60),
+    ev(2,"20:00","Proje: kod yazma","proje",120,30)
+  ]};
+}
+
+let state = loadLocal() || defaultState();
+let view = "today";
+let calMonth = new Date(); calMonth.setDate(1);
+let selDay = dkey(new Date());
+
+function loadLocal(){
+  try { const s = localStorage.getItem(LS_KEY); if (!s) return null; const o = JSON.parse(s); if (o && Array.isArray(o.categories) && Array.isArray(o.events)) return o; } catch(e){}
+  return null;
+}
+function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){} }
+
+/* ---------- bulut senkronu (db) ---------- */
+let docRef = null, writing = false, again = false, remoteTimer = null, dbOff = false;
+function setSync(text, ok){ const el = document.getElementById("sync"); el.textContent = text; el.classList.toggle("ok", !!ok); }
+function commit(){
+  state.updatedAt = Date.now();
+  saveLocal();
+  if (docRef && !dbOff){ clearTimeout(remoteTimer); remoteTimer = setTimeout(flush, 700); setSync("Kaydediliyor…"); }
+  render();
+}
+async function flush(){
+  if (!docRef || dbOff) return;
+  if (writing){ again = true; return; }
+  writing = true;
+  try { await docRef.set({state: JSON.parse(JSON.stringify(state))}); setSync("Hesabına kaydedildi", true); }
+  catch(e){
+    if (e && e.code === "unavailable"){ setTimeout(flush, 1500 + Math.random()*1000); }
+    else { dbOff = true; setSync("Bu cihazda kayıtlı"); }
+  }
+  finally { writing = false; if (again){ again = false; flush(); } }
+}
+async function initDb(tries){
+  const c = window.claude;
+  if (!c || typeof c.use !== "function"){ if ((tries||0) < 10) setTimeout(() => initDb((tries||0)+1), 400); return; }
+  try {
+    const [db, user] = await Promise.all([c.use("db"), c.use("user")]);
+    if (!db || !user) return;
+    const id = await user.id();
+    if (!id) return;
+    docRef = db.doc("data/users/" + id + "/calendar");
+    setSync("Bağlanıyor…");
+    const t = setTimeout(() => setSync("Bu cihazda kayıtlı"), 10000);
+    docRef.onSnapshot(snap => {
+      if (snap.metadata.hasPendingWrites) return;
+      if (!snap.metadata.fromCache) clearTimeout(t);
+      if (snap.exists){
+        const d = snap.data(); const r = d && d.state;
+        if (r && Array.isArray(r.events) && Array.isArray(r.categories)){
+          if ((r.updatedAt||0) > (state.updatedAt||0)){ state = JSON.parse(JSON.stringify(r)); saveLocal(); render(); }
+          else if ((r.updatedAt||0) < (state.updatedAt||0) && !snap.metadata.fromCache){ flush(); }
+        }
+        if (!snap.metadata.fromCache) setSync("Hesabına kaydedildi", true);
+      } else if (!snap.metadata.fromCache){
+        if (!state.updatedAt) state.updatedAt = Date.now();
+        flush();
+      }
+    }, () => { clearTimeout(t); setSync("Bu cihazda kayıtlı"); });
+  } catch(e){ setSync("Bu cihazda kayıtlı"); }
+}
+
+/* ---------- yardımcılar ---------- */
+const catById = id => state.categories.find(c => c.id === id) || {id:"", name:"Kategorisiz", color:"#6b7280", target:0};
+const startOf = e => new Date(e.date + "T" + (e.time || "00:00"));
+const sortEv = (a,b) => startOf(a) - startOf(b);
+function weekStats(){
+  const ws = weekStart(new Date()), we = addDays(ws,7);
+  const m = {};
+  state.categories.forEach(c => m[c.id] = {plan:0, done:0});
+  state.events.forEach(e => {
+    const s = startOf(e); if (s < ws || s >= we) return;
+    const k = m[e.catId] || (m[e.catId] = {plan:0, done:0});
+    k.plan += +e.dur || 0; if (e.done) k.done += +e.dur || 0;
+  });
+  return m;
+}
+function relTime(ms){
+  const m = Math.round(ms/60000);
+  if (m < 1) return "şimdi";
+  if (m < 60) return m + " dk sonra";
+  const h = Math.floor(m/60);
+  if (h < 24) return h + " sa " + (m%60) + " dk sonra";
+  const d = Math.floor(h/24); return d + " gün " + (h%24) + " sa sonra";
+}
+function dayTitle(key){
+  const d = new Date(key + "T00:00"), t = dkey(new Date()), tm = dkey(addDays(new Date(),1));
+  const base = d.getDate() + " " + MONTHS[d.getMonth()] + " " + WDL[d.getDay()];
+  if (key === t) return "Bugün · " + base;
+  if (key === tm) return "Yarın · " + base;
+  return base;
+}
+
+/* ---------- görünümler ---------- */
+function evRow(e, showDate){
+  const c = catById(e.catId);
+  const rem = e.remind >= 0 ? (REMINDERS.find(r => r[0] === e.remind) || [0, e.remind + " dk önce"])[1] : "";
+  return `<div class="ev ${e.done ? "done" : ""}" data-edit="${e.id}" role="button" tabindex="0">
+    <span class="bar" style="background:${c.color}"></span>
+    <span class="t">${esc(e.time)}${showDate ? `<small>${esc(e.date.slice(8))}.${esc(e.date.slice(5,7))}</small>` : `<small>${fmtDur(e.dur)}</small>`}</span>
+    <span><span class="ti">${esc(e.title)}</span>
+      <span class="meta"><span>${esc(c.name)}</span>${showDate ? `<span>${fmtDur(e.dur)}</span>` : ""}${rem ? `<span>🔔 ${esc(rem)}</span>` : ""}${e.sample ? `<span class="tag">örnek</span>` : ""}</span></span>
+    <button type="button" class="chk" data-done="${e.id}" aria-label="${e.done ? "Yapılmadı olarak işaretle" : "Tamamlandı olarak işaretle"}">✓</button>
+  </div>`;
+}
+
+function renderToday(){
+  const now = new Date(), tk = dkey(now);
+  const todays = state.events.filter(e => e.date === tk).sort(sortEv);
+  const planToday = todays.reduce((s,e) => s + (+e.dur||0), 0);
+  const doneToday = todays.filter(e => e.done).reduce((s,e) => s + (+e.dur||0), 0);
+  const ws = weekStats();
+  const weekPlan = Object.values(ws).reduce((s,x) => s + x.plan, 0);
+  const weekTarget = state.categories.reduce((s,c) => s + (+c.target||0)*60, 0);
+  const upcoming = state.events.filter(e => !e.done && startOf(e) > now).sort(sortEv);
+  const next = upcoming[0];
+  const later = upcoming.filter(e => e.date !== tk && startOf(e) < addDays(now,7));
+  const groups = {};
+  later.forEach(e => (groups[e.date] = groups[e.date] || []).push(e));
+  const hasSample = state.events.some(e => e.sample);
+  return `
+  <section>
+    <div class="tiles">
+      <div class="tile"><b>${fmtH(planToday)}</b><span>bugün planlı</span></div>
+      <div class="tile"><b>${fmtH(doneToday)}</b><span>bugün tamam</span></div>
+      <div class="tile"><b>${fmtH(weekPlan)}</b><span>hafta / ${fmtH(weekTarget)} hedef</span></div>
+    </div>
+    ${next ? `<div class="next" data-edit="${next.id}" role="button" tabindex="0"><small>Sıradaki</small><strong>${esc(next.title)}</strong>
+      <span class="cd" data-countdown="${startOf(next).getTime()}">${relTime(startOf(next) - now)}</span>
+      <span>${esc(dayTitle(next.date))} · ${esc(next.time)} · ${fmtDur(next.dur)} · ${esc(catById(next.catId).name)}</span></div>` : ""}
+  </section>
+  <section>
+    <h2>Bugünün planı</h2>
+    <div class="list">${todays.length ? todays.map(e => evRow(e)).join("") : `<div class="empty">Bugün için etkinlik yok. Sağ alttaki düğmeyle ekle.</div>`}</div>
+  </section>
+  <section>
+    <h2>Önümüzdeki 7 gün</h2>
+    <div class="list">${Object.keys(groups).length ? Object.keys(groups).sort().map(k => `<div class="daylabel">${esc(dayTitle(k))}</div>` + groups[k].map(e => evRow(e)).join("")).join("") : `<div class="empty">Yaklaşan etkinlik yok.</div>`}</div>
+  </section>
+  ${renderTools(hasSample)}`;
+}
+
+function renderTools(hasSample){
+  const nOK = typeof Notification !== "undefined";
+  const perm = nOK ? Notification.permission : "yok";
+  let info, icsLabel;
+  if (window.desktop){
+    info = "Pencereyi kapatsan da uygulama sistem tepsisinde çalışmaya devam eder ve zamanı gelen etkinlikler için masaüstü bildirimi gösterir. Tamamen çıkmak için tepsi simgesinden “Çıkış”ı seç.";
+    icsLabel = "Takvim dosyası olarak kaydet (.ics)";
+  } else if (IS_IOS){
+    info = (IS_STANDALONE ? "" : "<b>Kurulum:</b> Safari'de alttaki Paylaş düğmesine, ardından “Ana Ekrana Ekle”ye dokun; uygulama simgesiyle açılır. ")
+      + "Uygulama açıkken zamanı gelen etkinlik için uyarı çıkar. Uygulama kapalıyken de alarm çalsın istersen etkinlikleri iPhone Takvimi'ne aktar.";
+    icsLabel = "iPhone Takvimi'ne aktar";
+  } else {
+    info = "Sayfa açıkken zamanı gelen etkinlik için üstte uyarı çıkar. Uygulama kapalıyken de hatırlatma istersen etkinlikleri telefonunun takvimine alarmlarıyla birlikte aktar.";
+    icsLabel = "Takvime aktar (.ics)";
+  }
+  return `<section class="tools">
+    <h2>Hatırlatmalar</h2>
+    <p>${info}</p>
+    <div class="row">
+      <button type="button" class="btn primary" id="btn-ics">${icsLabel}</button>
+      ${nOK && perm !== "granted" ? `<button type="button" class="btn" id="btn-notif">Bildirimlere izin ver</button>` : ""}
+      ${hasSample ? `<button type="button" class="btn danger" id="btn-clear-sample">Örnekleri sil</button>` : ""}
+    </div>
+    <p id="tools-msg"></p>
+  </section>
+  <section class="tools">
+    <h2>Yedek</h2>
+    <p>Veriler sadece bu cihazda saklanır. Ara sıra yedek al; yedek dosyasıyla verilerini başka bir cihaza (örneğin bilgisayardan iPhone'a) da taşıyabilirsin.</p>
+    <div class="row">
+      <button type="button" class="btn" id="btn-backup">Yedek al</button>
+      <button type="button" class="btn" id="btn-restore">Yedeği geri yükle</button>
+      <input type="file" id="restore-file" accept=".json,application/json" hidden>
+    </div>
+    <p id="backup-msg"></p>
+  </section>`;
+}
+
+function renderCal(){
+  const y = calMonth.getFullYear(), m = calMonth.getMonth();
+  const first = new Date(y,m,1), start = weekStart(first);
+  const tk = dkey(new Date());
+  const byDay = {};
+  state.events.forEach(e => (byDay[e.date] = byDay[e.date] || []).push(e));
+  let cells = WD.map(w => `<div class="wd">${w}</div>`).join("");
+  for (let i = 0; i < 42; i++){
+    const d = addDays(start,i), k = dkey(d);
+    if (i >= 35 && d.getMonth() !== m) break;
+    const evs = (byDay[k] || []).sort(sortEv);
+    cells += `<button type="button" class="cell ${d.getMonth() !== m ? "out" : ""} ${k === tk ? "today" : ""} ${k === selDay ? "sel" : ""}" data-day="${k}" aria-label="${d.getDate()} ${MONTHS[d.getMonth()]}, ${evs.length} etkinlik">
+      <span>${d.getDate()}</span><span class="dots">${evs.slice(0,4).map(e => `<i style="background:${catById(e.catId).color}"></i>`).join("")}</span></button>`;
+  }
+  const sel = (byDay[selDay] || []).slice().sort(sortEv);
+  return `<section>
+    <div class="monthbar"><button type="button" id="prev" aria-label="Önceki ay">‹</button><h2 style="margin:0">${MONTHS[m]} ${y}</h2><button type="button" id="next" aria-label="Sonraki ay">›</button></div>
+    <div class="grid">${cells}</div>
+  </section>
+  <section>
+    <h2>${esc(dayTitle(selDay))}</h2>
+    <div class="list">${sel.length ? sel.map(e => evRow(e)).join("") : `<div class="empty">Bu gün boş.</div>`}</div>
+    <button type="button" class="btn" id="add-on-day">Bu güne etkinlik ekle</button>
+  </section>`;
+}
+
+function renderCat(){
+  const ws = weekStats();
+  const ws0 = weekStart(new Date()), we = addDays(ws0,6);
+  const rows = state.categories.map(c => {
+    const s = ws[c.id] || {plan:0, done:0}, tgt = (+c.target||0)*60;
+    const max = Math.max(tgt, s.plan, 1);
+    let note, cls = "";
+    if (!tgt) note = "Haftalık hedef yok";
+    else if (s.plan < tgt) note = "Hedefe ulaşmak için " + fmtDur(tgt - s.plan) + " daha planla";
+    else if (s.plan > tgt){ note = "Hedefi " + fmtDur(s.plan - tgt) + " aştın"; cls = "over"; }
+    else note = "Plan hedefle tam uyumlu";
+    return `<div class="cat">
+      <div class="top"><span class="sw" style="background:${c.color}"></span><span class="name">${esc(c.name)}</span>
+        <span class="nums">${fmtH(s.done)} / ${fmtH(s.plan)} / ${fmtH(tgt)}</span>
+        <button type="button" class="iconbtn" data-editcat="${c.id}" aria-label="${esc(c.name)} düzenle">Düzenle</button></div>
+      <div class="track" aria-hidden="true"><span class="pl" style="width:${s.plan/max*100}%;background:${c.color}"></span><span class="dn" style="width:${s.done/max*100}%;background:${c.color}"></span>${tgt ? `<span style="position:absolute;top:0;bottom:0;left:calc(${tgt/max*100}% - 1px);width:2px;background:var(--ink)"></span>` : ""}</div>
+      <div class="note ${cls}">${note}</div>
+    </div>`;
+  }).join("");
+  return `<section>
+    <h2>Bu hafta: ${ws0.getDate()} ${MONTHS[ws0.getMonth()]} – ${we.getDate()} ${MONTHS[we.getMonth()]}</h2>
+    <p class="sub" style="margin:0">Sayılar: tamamlanan / planlanan / haftalık hedef. Koyu çubuk tamamlananı, açık çubuk planlananı, dikey çizgi hedefi gösterir.</p>
+    ${rows || `<div class="empty">Henüz kategori yok.</div>`}
+    <button type="button" class="btn primary" id="add-cat">+ Kategori ekle</button>
+  </section>`;
+}
+
+function render(){
+  const now = new Date();
+  document.getElementById("today-str").textContent = now.getDate() + " " + MONTHS[now.getMonth()] + " " + now.getFullYear() + ", " + WDL[now.getDay()];
+  document.getElementById("hello").textContent = view === "today" ? "Bugün" : view === "cal" ? "Takvim" : "Zaman dağılımı";
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === view)));
+  const v = document.getElementById("view");
+  v.innerHTML = `<div style="display:flex;flex-direction:column;gap:18px">${view === "today" ? renderToday() : view === "cal" ? renderCal() : renderCat()}</div>`;
+}
+
+/* ---------- etkinlik formu ---------- */
+const scrim = document.getElementById("scrim"), sheet = document.getElementById("sheet");
+let sheetMode = null, editing = null, chosenCat = null, chosenDur = 60;
+function closeSheet(){ scrim.classList.remove("open"); sheetMode = null; editing = null; }
+function openEvent(id, date){
+  const e = id ? state.events.find(x => x.id === id) : null;
+  sheetMode = "event"; editing = e;
+  const nowH = new Date(); nowH.setMinutes(0); nowH.setHours(Math.min(nowH.getHours()+1, 23));
+  chosenCat = e ? e.catId : (state.categories[0] || {}).id;
+  chosenDur = e ? +e.dur : 60;
+  const remind = e ? e.remind : 15;
+  sheet.innerHTML = `
+    <h3>${e ? "Etkinliği düzenle" : "Yeni etkinlik"}</h3>
+    <label class="f" for="f-title">Ne yapacaksın?<input id="f-title" required maxlength="80" value="${esc(e ? e.title : "")}" placeholder="Örn. Fizik çalışması"></label>
+    <div class="f" style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--muted)">Kategori
+      <div class="chips" id="f-cats">${state.categories.map(c => `<button type="button" class="chip" data-cat="${c.id}" aria-pressed="${c.id === chosenCat}"><span class="sw" style="background:${c.color};width:10px;height:10px"></span>${esc(c.name)}</button>`).join("")}</div>
+      <span class="hint" id="f-cathint"></span></div>
+    <div class="two">
+      <label class="f" for="f-date">Tarih<input type="date" id="f-date" required value="${esc(e ? e.date : (date || dkey(new Date())))}"></label>
+      <label class="f" for="f-time">Saat<input type="time" id="f-time" required value="${esc(e ? e.time : pad(nowH.getHours()) + ":00")}"></label>
+    </div>
+    <div class="f" style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--muted)">Ne kadar zaman ayıracaksın?
+      <div class="chips" id="f-durs">${[30,45,60,90,120,180].map(d => `<button type="button" class="chip" data-dur="${d}" aria-pressed="${d === chosenDur}">${fmtDur(d)}</button>`).join("")}
+      <label for="f-dur" style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="number" id="f-dur" min="5" max="1440" step="5" value="${chosenDur}" style="width:80px;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:7px"> dk</label></div></div>
+    <label class="f" for="f-rem">Hatırlatma<select id="f-rem">${REMINDERS.map(r => `<option value="${r[0]}" ${r[0] === remind ? "selected" : ""}>${r[1]}</option>`).join("")}</select></label>
+    <label class="f" for="f-note">Not<textarea id="f-note" rows="2" maxlength="300">${esc(e ? e.note : "")}</textarea></label>
+    <div class="row" style="justify-content:space-between">
+      ${e ? `<button type="button" class="btn danger" id="f-del">Sil</button>` : "<span></span>"}
+      <div class="row"><button type="button" class="btn" id="f-cancel">Vazgeç</button><button type="submit" class="btn primary">Kaydet</button></div>
+    </div>`;
+  scrim.classList.add("open");
+  updateCatHint();
+  setTimeout(() => { const t = document.getElementById("f-title"); if (t && !e) t.focus(); }, 50);
+}
+function updateCatHint(){
+  const h = document.getElementById("f-cathint"); if (!h) return;
+  const c = catById(chosenCat), s = weekStats()[chosenCat] || {plan:0};
+  const tgt = (+c.target||0)*60;
+  let plan = s.plan;
+  if (editing && editing.catId === chosenCat){ const sd = startOf(editing), ws = weekStart(new Date()); if (sd >= ws && sd < addDays(ws,7)) plan -= +editing.dur || 0; }
+  if (!tgt) h.textContent = "Bu kategoride haftalık hedef yok.";
+  else if (plan < tgt) h.textContent = "Bu hafta " + c.name + " için " + fmtDur(tgt - plan) + " daha ayırabilirsin (hedef " + fmtH(tgt) + ").";
+  else h.textContent = "Bu hafta " + c.name + " hedefi zaten dolu (" + fmtH(plan) + " planlı).";
+}
+function openCat(id){
+  const c = id ? state.categories.find(x => x.id === id) : null;
+  sheetMode = "cat"; editing = c;
+  let color = c ? c.color : COLORS[state.categories.length % COLORS.length];
+  sheet.innerHTML = `
+    <h3>${c ? "Kategoriyi düzenle" : "Yeni kategori"}</h3>
+    <label class="f" for="c-name">Ad<input id="c-name" required maxlength="30" value="${esc(c ? c.name : "")}" placeholder="Örn. Müzik"></label>
+    <label class="f" for="c-target">Haftalık hedef süre (saat)<input type="number" id="c-target" min="0" max="100" step="0.5" value="${c ? c.target : 3}"></label>
+    <div class="f" style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--muted)">Renk
+      <div class="chips" id="c-colors">${COLORS.map(x => `<button type="button" class="chip" data-color="${x}" aria-pressed="${x === color}" aria-label="Renk ${x}"><span class="sw" style="background:${x}"></span></button>`).join("")}</div></div>
+    <div class="row" style="justify-content:space-between">
+      ${c ? `<button type="button" class="btn danger" id="c-del">Sil</button>` : "<span></span>"}
+      <div class="row"><button type="button" class="btn" id="f-cancel">Vazgeç</button><button type="submit" class="btn primary">Kaydet</button></div>
+    </div>
+    <p class="hint" id="c-msg"></p>`;
+  sheet.dataset.color = color;
+  scrim.classList.add("open");
+}
+
+sheet.addEventListener("click", ev => {
+  const t = ev.target.closest("button"); if (!t) return;
+  if (t.id === "f-cancel") return closeSheet();
+  if (t.dataset.cat){ chosenCat = t.dataset.cat; sheet.querySelectorAll("[data-cat]").forEach(b => b.setAttribute("aria-pressed", String(b === t))); updateCatHint(); }
+  if (t.dataset.dur){ chosenDur = +t.dataset.dur; document.getElementById("f-dur").value = chosenDur; sheet.querySelectorAll("[data-dur]").forEach(b => b.setAttribute("aria-pressed", String(b === t))); }
+  if (t.dataset.color){ sheet.dataset.color = t.dataset.color; sheet.querySelectorAll("[data-color]").forEach(b => b.setAttribute("aria-pressed", String(b === t))); }
+  if (t.id === "f-del" && editing){
+    if (t.dataset.confirm){ state.events = state.events.filter(x => x.id !== editing.id); closeSheet(); commit(); }
+    else { t.dataset.confirm = "1"; t.textContent = "Silmek için tekrar dokun"; }
+  }
+  if (t.id === "c-del" && editing){
+    const used = state.events.some(x => x.catId === editing.id);
+    if (t.dataset.confirm){ state.categories = state.categories.filter(x => x.id !== editing.id); closeSheet(); commit(); }
+    else { t.dataset.confirm = "1"; t.textContent = "Silmek için tekrar dokun"; document.getElementById("c-msg").textContent = used ? "Bu kategorideki etkinlikler “Kategorisiz” görünecek." : ""; }
+  }
+});
+sheet.addEventListener("input", ev => {
+  if (ev.target.id === "f-dur"){ chosenDur = +ev.target.value || 0; sheet.querySelectorAll("[data-dur]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.dur === chosenDur))); }
+});
+sheet.addEventListener("submit", ev => {
+  ev.preventDefault();
+  if (sheetMode === "event"){
+    const title = document.getElementById("f-title").value.trim();
+    const date = document.getElementById("f-date").value, time = document.getElementById("f-time").value;
+    const dur = Math.max(5, Math.min(1440, +document.getElementById("f-dur").value || chosenDur || 60));
+    if (!title || !date || !time) return;
+    const data = {title, catId: chosenCat || "", date, time, dur, remind: +document.getElementById("f-rem").value, note: document.getElementById("f-note").value.trim()};
+    if (editing){
+      const changedTime = editing.date !== date || editing.time !== time || editing.remind !== data.remind;
+      Object.assign(editing, data, {sample:false}); if (changedTime) editing.notified = false;
+    } else state.events.push(Object.assign({id: uid(), done:false, notified:false, sample:false}, data));
+    selDay = date;
+  } else if (sheetMode === "cat"){
+    const name = document.getElementById("c-name").value.trim(); if (!name) return;
+    const target = Math.max(0, +document.getElementById("c-target").value || 0), color = sheet.dataset.color || COLORS[0];
+    if (editing) Object.assign(editing, {name, target, color});
+    else state.categories.push({id: uid(), name, target, color});
+  }
+  closeSheet(); commit();
+});
+scrim.addEventListener("click", ev => { if (ev.target === scrim) closeSheet(); });
+document.addEventListener("keydown", ev => { if (ev.key === "Escape" && scrim.classList.contains("open")) closeSheet(); });
+
+/* ---------- ana tıklamalar ---------- */
+document.querySelector("nav.tabs").addEventListener("click", ev => { const b = ev.target.closest("button"); if (b){ view = b.dataset.view; render(); } });
+document.getElementById("fab").addEventListener("click", () => openEvent(null, view === "cal" ? selDay : null));
+document.getElementById("view").addEventListener("click", ev => {
+  const done = ev.target.closest("[data-done]");
+  if (done){ ev.stopPropagation(); const e = state.events.find(x => x.id === done.dataset.done); if (e){ e.done = !e.done; commit(); } return; }
+  const b = ev.target.closest("button, [data-edit]"); if (!b) return;
+  if (b.dataset.edit) return openEvent(b.dataset.edit);
+  if (b.dataset.day){ selDay = b.dataset.day; render(); return; }
+  if (b.dataset.editcat) return openCat(b.dataset.editcat);
+  if (b.id === "prev"){ calMonth.setMonth(calMonth.getMonth()-1); render(); }
+  if (b.id === "next"){ calMonth.setMonth(calMonth.getMonth()+1); render(); }
+  if (b.id === "add-on-day") openEvent(null, selDay);
+  if (b.id === "add-cat") openCat(null);
+  if (b.id === "btn-ics") exportIcs();
+  if (b.id === "btn-notif") askNotif();
+  if (b.id === "btn-backup") exportBackup();
+  if (b.id === "btn-restore") document.getElementById("restore-file").click();
+  if (b.id === "btn-clear-sample"){ state.events = state.events.filter(e => !e.sample); commit(); }
+});
+document.getElementById("view").addEventListener("change", ev => {
+  if (ev.target.id === "restore-file" && ev.target.files && ev.target.files[0]) importBackup(ev.target.files[0]);
+});
+document.getElementById("view").addEventListener("keydown", ev => {
+  if ((ev.key === "Enter" || ev.key === " ") && ev.target.dataset && ev.target.dataset.edit){ ev.preventDefault(); openEvent(ev.target.dataset.edit); }
+});
+
+/* ---------- hatırlatma döngüsü ---------- */
+const toast = document.getElementById("toast"); const queue = [];
+function showNext(){
+  if (toast.classList.contains("show") || !queue.length) return;
+  const e = queue.shift(), s = startOf(e), diff = s - new Date();
+  document.getElementById("toast-msg").innerHTML = `<b>🔔 ${esc(e.title)}</b>${diff > 0 ? relTime(diff) : "başladı"} · ${esc(e.time)} · ${fmtDur(e.dur)}`;
+  toast.classList.add("show");
+  try { navigator.vibrate && navigator.vibrate([200,100,200]); } catch(err){}
+}
+document.getElementById("toast-ok").addEventListener("click", () => { toast.classList.remove("show"); showNext(); });
+function checkReminders(){
+  const now = Date.now(); let changed = false;
+  state.events.forEach(e => {
+    if (e.done || e.notified || !(e.remind >= 0)) return;
+    const s = startOf(e).getTime();
+    if (now >= s - e.remind*60000 && now < s + (+e.dur||0)*60000){
+      e.notified = true; changed = true; queue.push(e);
+      notify(e);
+    }
+  });
+  if (changed){ commit(); showNext(); }
+  document.querySelectorAll("[data-countdown]").forEach(el => el.textContent = relTime(+el.dataset.countdown - now));
+}
+function notify(e){
+  if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  const title = "Hatırlatma: " + e.title, opts = {body: e.time + " · " + fmtDur(e.dur), tag: e.id, icon: "icons/icon-192.png"};
+  // iPhone'da (ve Android'de) bildirim sadece service worker üzerinden gösterilebilir.
+  if (swReg && swReg.showNotification){ swReg.showNotification(title, opts).catch(() => {}); return; }
+  try { const n = new Notification(title, opts); n.onclick = () => { if (window.desktop) window.desktop.show(); else window.focus(); }; } catch(err){}
+}
+async function askNotif(){
+  const msg = document.getElementById("tools-msg");
+  const denied = IS_IOS ? "İzin verilmedi. Ayarlar → Bildirimler → Planlayıcı'dan açabilirsin; uygulama içi uyarılar ve takvim aktarımı yine çalışır."
+                        : "Bu görünüm sistem bildirimlerine izin vermiyor; sayfa içi uyarılar ve takvim aktarımı çalışır.";
+  try { const p = await Notification.requestPermission(); msg.textContent = p === "granted" ? "Bildirimler açık. Uygulama açıkken sistem bildirimi de gelecek." : denied; }
+  catch(e){ msg.textContent = denied; }
+  if (Notification.permission === "granted") render();
+}
+
+/* ---------- .ics dışa aktarım ---------- */
+function icsText(){
+  const now = new Date();
+  const stamp = d => d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"T"+pad(d.getHours())+pad(d.getMinutes())+"00";
+  const icsEsc = s => String(s||"").replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\n/g,"\\n");
+  const utc = now.toISOString().replace(/[-:]/g,"").slice(0,15)+"Z";
+  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Zaman Planlayici//TR","CALSCALE:GREGORIAN"];
+  state.events.filter(e => !e.done && startOf(e).getTime() + (+e.dur||0)*60000 > now.getTime()).forEach(e => {
+    const s = startOf(e), en = new Date(s.getTime() + (+e.dur||0)*60000);
+    lines.push("BEGIN:VEVENT","UID:"+e.id+"@zaman-planlayici","DTSTAMP:"+utc,"DTSTART:"+stamp(s),"DTEND:"+stamp(en),
+      "SUMMARY:"+icsEsc(e.title),"CATEGORIES:"+icsEsc(catById(e.catId).name));
+    if (e.note) lines.push("DESCRIPTION:"+icsEsc(e.note));
+    if (e.remind >= 0) lines.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+icsEsc(e.title),"TRIGGER:-PT"+e.remind+"M","END:VALARM");
+    lines.push("END:VEVENT");
+  });
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n");
+}
+async function exportIcs(){
+  const msg = document.getElementById("tools-msg"), text = icsText();
+  const n = (text.match(/BEGIN:VEVENT/g) || []).length;
+  if (!n){ msg.textContent = "Aktarılacak yaklaşan etkinlik yok."; return; }
+  const filename = "takvim-" + dkey(new Date()) + ".ics";
+  if (window.desktop){
+    try {
+      const r = await window.desktop.saveFile(filename, text, "ics");
+      msg.textContent = r && r.saved ? n + " etkinlik kaydedildi: " + r.path : "Kaydetme iptal edildi.";
+    } catch(e){ msg.textContent = "Dosya kaydedilemedi: " + (e && e.message || e); }
+    return;
+  }
+  if (IS_IOS){
+    // Safari takvim dosyasını açınca etkinlik önizlemesini ve “Tümünü Ekle” seçeneğini gösterir.
+    const url = URL.createObjectURL(new Blob([text], {type: "text/calendar;charset=utf-8"}));
+    const a = document.createElement("a"); a.href = url; a.rel = "noopener";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    msg.textContent = n + " etkinlik hazır. Açılan ekranda “Tümünü Ekle”ye dokun; alarmlarıyla birlikte Takvim'e eklenir.";
+    return;
+  }
+  if (IS_WEB){
+    downloadText(filename, text, "text/calendar");
+    msg.textContent = n + " etkinlik dosyaya yazıldı. Dosyayı açınca takvimine alarmlarıyla eklenir.";
+    return;
+  }
+  try {
+    const dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null;
+    if (dl){ await dl.save({filename: "takvim-" + dkey(new Date()) + ".ics", data: text}); msg.textContent = n + " etkinlik dosyaya yazıldı. Dosyayı açınca telefonun takvimine alarmlarıyla eklenir."; return; }
+  } catch(e){ if (e && /declin|cancel|reject/i.test(String(e.code||e.message))){ msg.textContent = "İndirme iptal edildi."; return; } }
+  try { await navigator.clipboard.writeText(text); msg.textContent = "İndirme bu görünümde açılamadı; takvim metni panoya kopyalandı."; }
+  catch(e){ msg.textContent = "İndirme bu görünümde açılamadı."; }
+}
+
+/* ---------- yedek ---------- */
+function downloadText(filename, text, type){
+  const url = URL.createObjectURL(new Blob([text], {type: type + ";charset=utf-8"}));
+  const a = document.createElement("a"); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+async function exportBackup(){
+  const msg = document.getElementById("backup-msg");
+  const filename = "zaman-planlayici-yedek-" + dkey(new Date()) + ".json";
+  const text = JSON.stringify({app: "zaman-planlayici", exportedAt: new Date().toISOString(), state}, null, 2);
+  try {
+    if (window.desktop){
+      const r = await window.desktop.saveFile(filename, text, "json");
+      msg.textContent = r && r.saved ? "Yedek kaydedildi: " + r.path : "Kaydetme iptal edildi.";
+      return;
+    }
+    const file = typeof File !== "undefined" ? new File([text], filename, {type: "application/json"}) : null;
+    if (IS_IOS && file && navigator.canShare && navigator.canShare({files: [file]})){
+      await navigator.share({files: [file], title: "Zaman Planlayıcı yedeği"});
+      msg.textContent = "Yedek paylaşıldı. “Dosyalar'a Kaydet” ile iCloud Drive'a koyabilirsin.";
+      return;
+    }
+    downloadText(filename, text, "application/json");
+    msg.textContent = "Yedek indirildi: " + filename;
+  } catch(e){
+    msg.textContent = e && e.name === "AbortError" ? "Yedekleme iptal edildi." : "Yedek alınamadı: " + (e && e.message || e);
+  }
+}
+function importBackup(file){
+  const msg = document.getElementById("backup-msg");
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const o = JSON.parse(String(reader.result));
+      const s = o && o.state ? o.state : o;
+      if (!s || !Array.isArray(s.events) || !Array.isArray(s.categories)) throw new Error("Bu dosya bir Zaman Planlayıcı yedeği değil.");
+      if (!confirm(s.events.length + " etkinlik ve " + s.categories.length + " kategori yüklenecek. Bu cihazdaki mevcut verilerin yerini alacak. Devam edilsin mi?")){ msg.textContent = "Geri yükleme iptal edildi."; return; }
+      state = Object.assign({v: 1}, s);
+      commit();
+      const m = document.getElementById("backup-msg"); if (m) m.textContent = "Yedek geri yüklendi.";
+    } catch(e){ msg.textContent = "Yedek okunamadı: " + (e && e.message || e); }
+  };
+  reader.onerror = () => { msg.textContent = "Dosya okunamadı."; };
+  reader.readAsText(file);
+}
+
+/* ---------- PWA: çevrimdışı çalışma + kalıcı depolama ---------- */
+if (IS_WEB && "serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js").then(r => { swReg = r; }).catch(() => {});
+  navigator.serviceWorker.ready.then(r => { swReg = r; }).catch(() => {});
+}
+if (IS_WEB && navigator.storage && navigator.storage.persist){ navigator.storage.persist().catch(() => {}); }
+
+render();
+setInterval(checkReminders, 20000);
+setTimeout(checkReminders, 1500);
+initDb(0);
+})();
+</script>
+</body>
+</html>
