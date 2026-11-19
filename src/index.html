@@ -5,7 +5,7 @@
 <script>if (location.protocol === "http:" && !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) location.replace("https:" + location.href.slice(5));</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Zaman Planlayıcı</title>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; worker-src 'self'; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; worker-src 'self'; manifest-src 'self'; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com">
 <link href="fonts.css" rel="stylesheet">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
@@ -50,8 +50,10 @@ button{cursor:pointer}
 header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 h1{font-family:var(--display);font-size:26px;margin:0;line-height:1.1;text-wrap:balance}
 .sub{color:var(--muted);font-size:13px}
-.sync{font-size:12px;padding:4px 10px;border-radius:99px;background:var(--soft);color:var(--muted);white-space:nowrap}
+.sync{font-size:12px;padding:4px 10px;border-radius:99px;background:var(--soft);color:var(--muted);white-space:nowrap;border:0}
 .sync.ok{color:var(--good)}
+.sync.err{color:var(--warn)}
+.btn:disabled{opacity:.55;cursor:default}
 nav.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--soft);padding:4px;border-radius:12px;position:sticky;top:calc(8px + env(safe-area-inset-top));z-index:5}
 nav.tabs button{border:0;background:transparent;padding:9px 6px;border-radius:9px;font-weight:600;color:var(--muted)}
 nav.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -138,7 +140,7 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;font-weight:60
       <h1 id="hello">Bugün</h1>
       <div class="sub" id="today-str"></div>
     </div>
-    <span class="sync" id="sync">Bu cihazda kayıtlı</span>
+    <button type="button" class="sync" id="sync" aria-label="Hesap ve senkron">Bu cihazda kayıtlı</button>
   </header>
 
   <nav class="tabs" role="tablist">
@@ -209,53 +211,48 @@ function loadLocal(){
 }
 function saveLocal(){ try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){} }
 
-/* ---------- bulut senkronu (db) ---------- */
-let docRef = null, writing = false, again = false, remoteTimer = null, dbOff = false;
-function setSync(text, ok){ const el = document.getElementById("sync"); el.textContent = text; el.classList.toggle("ok", !!ok); }
+/* ---------- bulut senkronu (ayrıntılar sync.js içinde) ---------- */
 function commit(){
   state.updatedAt = Date.now();
   saveLocal();
-  if (docRef && !dbOff){ clearTimeout(remoteTimer); remoteTimer = setTimeout(flush, 700); setSync("Kaydediliyor…"); }
   render();
+  if (window.ZPSync) window.ZPSync.push();
 }
-async function flush(){
-  if (!docRef || dbOff) return;
-  if (writing){ again = true; return; }
-  writing = true;
-  try { await docRef.set({state: JSON.parse(JSON.stringify(state))}); setSync("Hesabına kaydedildi", true); }
-  catch(e){
-    if (e && e.code === "unavailable"){ setTimeout(flush, 1500 + Math.random()*1000); }
-    else { dbOff = true; setSync("Bu cihazda kayıtlı"); }
-  }
-  finally { writing = false; if (again){ again = false; flush(); } }
+// sync.js'in sayfaya eriştiği tek kapı.
+window.ZP = {
+  state: () => state,
+  saveLocal: () => saveLocal(),
+  remoteChanged(){ state.updatedAt = Date.now(); saveLocal(); render(); updateCatHint(); }
+};
+const SYNC_TEXT = {
+  off: ["Bu cihazda kayıtlı", ""],
+  "signed-out": ["Senkron kapalı", ""],
+  connecting: ["Bağlanıyor…", ""],
+  pending: ["Eşitleniyor…", ""],
+  synced: ["Senkronize ✓", "ok"],
+  offline: ["Çevrimdışı · sonra eşitlenecek", ""],
+  error: ["Senkron hatası", "err"]
+};
+function syncView(){
+  const s = window.ZPSync;
+  const st = s ? s.status : "off";
+  const el = document.getElementById("sync");
+  const [text, cls] = SYNC_TEXT[st] || SYNC_TEXT.off;
+  el.textContent = text;
+  el.classList.toggle("ok", cls === "ok");
+  el.classList.toggle("err", cls === "err");
+  el.title = s && s.user ? s.user.email + (s.error ? " · " + s.error : "") : (s && s.error) || "";
+  if (sheetMode === "account") renderAccountState();
+  const box = document.getElementById("acct-line");
+  if (box) box.innerHTML = accountLine();
+  const btn = document.getElementById("btn-account");
+  if (btn) btn.textContent = s && s.user ? "Hesabı yönet" : "Giriş yap / hesap oluştur";
 }
-async function initDb(tries){
-  const c = window.claude;
-  if (!c || typeof c.use !== "function"){ if ((tries||0) < 10) setTimeout(() => initDb((tries||0)+1), 400); return; }
-  try {
-    const [db, user] = await Promise.all([c.use("db"), c.use("user")]);
-    if (!db || !user) return;
-    const id = await user.id();
-    if (!id) return;
-    docRef = db.doc("data/users/" + id + "/calendar");
-    setSync("Bağlanıyor…");
-    const t = setTimeout(() => setSync("Bu cihazda kayıtlı"), 10000);
-    docRef.onSnapshot(snap => {
-      if (snap.metadata.hasPendingWrites) return;
-      if (!snap.metadata.fromCache) clearTimeout(t);
-      if (snap.exists){
-        const d = snap.data(); const r = d && d.state;
-        if (r && Array.isArray(r.events) && Array.isArray(r.categories)){
-          if ((r.updatedAt||0) > (state.updatedAt||0)){ state = JSON.parse(JSON.stringify(r)); saveLocal(); render(); }
-          else if ((r.updatedAt||0) < (state.updatedAt||0) && !snap.metadata.fromCache){ flush(); }
-        }
-        if (!snap.metadata.fromCache) setSync("Hesabına kaydedildi", true);
-      } else if (!snap.metadata.fromCache){
-        if (!state.updatedAt) state.updatedAt = Date.now();
-        flush();
-      }
-    }, () => { clearTimeout(t); setSync("Bu cihazda kayıtlı"); });
-  } catch(e){ setSync("Bu cihazda kayıtlı"); }
+function accountLine(){
+  const s = window.ZPSync;
+  if (!s || !s.configured) return "Bulut senkronu bu sürümde yapılandırılmamış; veriler yalnızca bu cihazda.";
+  if (!s.user) return "Hesabına giriş yaparsan telefonun ve bilgisayarın aynı verileri görür.";
+  return "Giriş yapıldı: <b>" + esc(s.user.email) + "</b> · " + esc((SYNC_TEXT[s.status] || SYNC_TEXT.off)[0]) + (s.error ? " · " + esc(s.error) : "");
 }
 
 /* ---------- yardımcılar ---------- */
@@ -362,6 +359,11 @@ function renderTools(hasSample){
       ${hasSample ? `<button type="button" class="btn danger" id="btn-clear-sample">Örnekleri sil</button>` : ""}
     </div>
     <p id="tools-msg"></p>
+  </section>
+  <section class="tools">
+    <h2>Hesap ve senkron</h2>
+    <p id="acct-line">${accountLine()}</p>
+    <div class="row"><button type="button" class="btn" id="btn-account">${window.ZPSync && window.ZPSync.user ? "Hesabı yönet" : "Giriş yap / hesap oluştur"}</button></div>
   </section>
   <section class="tools">
     <h2>Yedek</h2>
@@ -500,9 +502,66 @@ function openCat(id){
   scrim.classList.add("open");
 }
 
+/* ---------- hesap & senkron formu ---------- */
+function openAccount(){
+  sheetMode = "account"; editing = null;
+  const s = window.ZPSync;
+  sheet.innerHTML = `
+    <h3>Hesap ve senkron</h3>
+    <div id="acct-body"></div>
+    <p class="hint" id="a-msg" role="status"></p>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="btn" id="f-cancel">Kapat</button></div>`;
+  renderAccountState(true);
+  scrim.classList.add("open");
+  setTimeout(() => { const e = document.getElementById("a-email"); if (e && !(s && s.user)) e.focus(); }, 50);
+}
+let acctShown = null;
+function renderAccountState(force){
+  const body = document.getElementById("acct-body"); if (!body) return;
+  const s = window.ZPSync;
+  const mode = !s || !s.configured ? "off" : s.user ? "in:" + s.user.uid : "out";
+  if (!force && mode === acctShown){ const l = document.getElementById("a-line"); if (l) l.innerHTML = accountLine(); return; }
+  acctShown = mode;
+  if (mode === "off"){
+    body.innerHTML = `<p class="hint" style="font-size:14px">Bulut senkronu bu sürümde yapılandırılmamış; veriler yalnızca bu cihazda saklanıyor.</p>`;
+  } else if (mode === "out"){
+    body.innerHTML = `
+      <p class="hint" style="font-size:14px;margin:0 0 4px">Telefonunda ve bilgisayarında aynı hesapla giriş yap; etkinliklerin ve kategorilerin iki cihazda da aynı olur. Bu cihazdaki mevcut veriler hesabındakilerle birleştirilir.</p>
+      <label class="f" for="a-email">E-posta<input type="email" id="a-email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" required></label>
+      <label class="f" for="a-pw">Şifre<input type="password" id="a-pw" autocomplete="current-password" minlength="6" required></label>
+      <div class="row">
+        <button type="submit" class="btn primary" id="a-signin">Giriş yap</button>
+        <button type="button" class="btn" id="a-signup">Hesap oluştur</button>
+        <button type="button" class="iconbtn" id="a-reset">Şifremi unuttum</button>
+      </div>`;
+  } else {
+    body.innerHTML = `
+      <p class="hint" style="font-size:14px;margin:0" id="a-line">${accountLine()}</p>
+      <p class="hint" style="margin:0">Çıkış yaparsan veriler bu cihazda kalır ama artık eşitlenmez.</p>
+      <div class="row"><button type="button" class="btn danger" id="a-signout">Çıkış yap</button></div>`;
+  }
+}
+async function accountAction(kind){
+  const s = window.ZPSync, msg = document.getElementById("a-msg");
+  if (!s) return;
+  const email = (document.getElementById("a-email") || {}).value, pw = (document.getElementById("a-pw") || {}).value;
+  const busy = on => sheet.querySelectorAll("button").forEach(b => { if (b.id !== "f-cancel") b.disabled = on; });
+  try {
+    busy(true);
+    if (kind === "signin"){ if (!email || !pw) throw new Error("E-posta ve şifre gir."); msg.textContent = "Giriş yapılıyor…"; await s.signIn(email.trim(), pw); msg.textContent = "Giriş yapıldı. Veriler eşitleniyor."; }
+    if (kind === "signup"){ if (!email || !pw) throw new Error("Yeni hesap için e-posta ve şifre gir."); msg.textContent = "Hesap oluşturuluyor…"; await s.signUp(email.trim(), pw); msg.textContent = "Hesap oluşturuldu. Diğer cihazında aynı e-posta ve şifreyle giriş yap."; }
+    if (kind === "reset"){ if (!email) throw new Error("Önce e-posta adresini yaz."); await s.resetPassword(email.trim()); msg.textContent = "Şifre sıfırlama bağlantısı e-postana gönderildi."; }
+    if (kind === "signout"){ await s.signOut(); msg.textContent = "Çıkış yapıldı. Veriler bu cihazda duruyor."; }
+  } catch(e){ msg.textContent = e && e.message || String(e); }
+  finally { busy(false); renderAccountState(); }
+}
+
 sheet.addEventListener("click", ev => {
   const t = ev.target.closest("button"); if (!t) return;
   if (t.id === "f-cancel") return closeSheet();
+  if (t.id === "a-signup") return accountAction("signup");
+  if (t.id === "a-reset") return accountAction("reset");
+  if (t.id === "a-signout") return accountAction("signout");
   if (t.dataset.cat){ chosenCat = t.dataset.cat; sheet.querySelectorAll("[data-cat]").forEach(b => b.setAttribute("aria-pressed", String(b === t))); updateCatHint(); }
   if (t.dataset.dur){ chosenDur = +t.dataset.dur; document.getElementById("f-dur").value = chosenDur; sheet.querySelectorAll("[data-dur]").forEach(b => b.setAttribute("aria-pressed", String(b === t))); }
   if (t.dataset.color){ sheet.dataset.color = t.dataset.color; sheet.querySelectorAll("[data-color]").forEach(b => b.setAttribute("aria-pressed", String(b === t))); }
@@ -521,6 +580,7 @@ sheet.addEventListener("input", ev => {
 });
 sheet.addEventListener("submit", ev => {
   ev.preventDefault();
+  if (sheetMode === "account"){ accountAction("signin"); return; }
   if (sheetMode === "event"){
     const title = document.getElementById("f-title").value.trim();
     const date = document.getElementById("f-date").value, time = document.getElementById("f-time").value;
@@ -530,12 +590,14 @@ sheet.addEventListener("submit", ev => {
     if (editing){
       const changedTime = editing.date !== date || editing.time !== time || editing.remind !== data.remind;
       Object.assign(editing, data, {sample:false}); if (changedTime) editing.notified = false;
+      // Form açıkken öğe başka cihazdan silindiyse, kaydedilen hâli geri ekle.
+      if (!state.events.includes(editing)) state.events.push(editing);
     } else state.events.push(Object.assign({id: uid(), done:false, notified:false, sample:false}, data));
     selDay = date;
   } else if (sheetMode === "cat"){
     const name = document.getElementById("c-name").value.trim(); if (!name) return;
     const target = Math.max(0, +document.getElementById("c-target").value || 0), color = sheet.dataset.color || COLORS[0];
-    if (editing) Object.assign(editing, {name, target, color});
+    if (editing){ Object.assign(editing, {name, target, color}); if (!state.categories.includes(editing)) state.categories.push(editing); }
     else state.categories.push({id: uid(), name, target, color});
   }
   closeSheet(); commit();
@@ -559,6 +621,7 @@ document.getElementById("view").addEventListener("click", ev => {
   if (b.id === "add-cat") openCat(null);
   if (b.id === "btn-ics") exportIcs();
   if (b.id === "btn-notif") askNotif();
+  if (b.id === "btn-account") openAccount();
   if (b.id === "btn-backup") exportBackup();
   if (b.id === "btn-restore") document.getElementById("restore-file").click();
   if (b.id === "btn-clear-sample"){ state.events = state.events.filter(e => !e.sample); commit(); }
@@ -698,7 +761,7 @@ function importBackup(file){
       const o = JSON.parse(String(reader.result));
       const s = o && o.state ? o.state : o;
       if (!s || !Array.isArray(s.events) || !Array.isArray(s.categories)) throw new Error("Bu dosya bir Zaman Planlayıcı yedeği değil.");
-      if (!confirm(s.events.length + " etkinlik ve " + s.categories.length + " kategori yüklenecek. Bu cihazdaki mevcut verilerin yerini alacak. Devam edilsin mi?")){ msg.textContent = "Geri yükleme iptal edildi."; return; }
+      if (!confirm(s.events.length + " etkinlik ve " + s.categories.length + " kategori yüklenecek. Bu cihazdaki mevcut verilerin" + (window.ZPSync && window.ZPSync.user ? " (ve hesabındakilerin)" : "") + " yerini alacak. Devam edilsin mi?")){ msg.textContent = "Geri yükleme iptal edildi."; return; }
       state = Object.assign({v: 1}, s);
       commit();
       const m = document.getElementById("backup-msg"); if (m) m.textContent = "Yedek geri yüklendi.";
@@ -718,8 +781,14 @@ if (IS_WEB && navigator.storage && navigator.storage.persist){ navigator.storage
 render();
 setInterval(checkReminders, 20000);
 setTimeout(checkReminders, 1500);
-initDb(0);
+document.getElementById("sync").addEventListener("click", openAccount);
+// sync.js modülü yüklenince durum değişikliklerini dinle.
+(function hook(n){
+  if (window.ZPSync){ window.ZPSync.onChange(syncView); syncView(); return; }
+  if (n < 100) setTimeout(() => hook(n + 1), 50);
+})(0);
 })();
 </script>
+<script type="module" src="sync.js"></script>
 </body>
 </html>

@@ -6,7 +6,18 @@ Kategorili zaman planlayıcı ve takvim. Tek bir web uygulaması (`src/`) iki ş
   Safari'de açıp Paylaş → **Ana Ekrana Ekle**. İnternetsiz de çalışır.
 - **Linux masaüstü (Electron, AppImage):** sistem tepsisinde çalışır, kapalı pencerede de hatırlatır.
 
-Veriler yalnızca kullanıldığı cihazda (localStorage) saklanır. Cihazlar arası taşımak için uygulamadaki **Yedek al / Yedeği geri yükle**.
+Veriler önce cihazda (localStorage) saklanır. Uygulamada e-posta/şifreyle giriş yapılırsa
+**Firebase (Firestore)** üzerinden telefon ve bilgisayar arasında anlık eşitlenir; internetsizken
+yapılan değişiklikler bağlantı gelince gönderilir. Senkron olmadan taşımak için **Yedek al / Yedeği geri yükle**.
+
+## Bulut senkronu (Firebase)
+
+- `src/firebase-config.js`: Firebase konsolundaki web uygulaması yapılandırması (`null` ise senkron kapalı).
+- `src/sync.js`: eşitleme mantığı. Veri `users/{uid}/events/{id}` ve `users/{uid}/categories/{id}` belgelerinde;
+  her öğe `updatedAt` taşır, silinenler `deleted: true` iz kaydı olarak kalır, çakışmada öğe bazında son değişiklik kazanır.
+- `firestore.rules`: her kullanıcı yalnızca kendi verisine erişir. Firebase konsolu → Firestore → Kurallar'a yapıştırılır.
+- `src/vendor/firebase.js`: `npm run build:firebase` ile `sync/firebase-entry.js`'ten üretilir.
+- Yerel test: `npm run emulators` (auth + firestore emülatörü) ve `projectId`'si `demo-` ile başlayan bir yapılandırma.
 
 ## Geliştirme
 

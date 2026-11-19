@@ -1,13 +1,16 @@
 /* Zaman Planlayıcı service worker: uygulama dosyalarını önbelleğe alır, internetsiz de açılır.
    Dosyaları değiştirip yayınladığında VERSION'ı artır ki telefonlar yeni sürümü alsın. */
 "use strict";
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE = "zaman-planlayici-" + VERSION;
 const ASSETS = [
   "./",
   "./index.html",
   "./fonts.css",
   "./manifest.webmanifest",
+  "./sync.js",
+  "./firebase-config.js",
+  "./vendor/firebase.js",
   "./icons/apple-touch-icon.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

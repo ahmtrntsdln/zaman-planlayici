@@ -9,14 +9,20 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --linux AppImage"
+    "dist": "electron-builder --linux AppImage",
+    "build:firebase": "esbuild sync/firebase-entry.js --bundle --format=esm --minify --target=es2020,safari15 --legal-comments=external --outfile=src/vendor/firebase.js",
+    "predist": "npm run build:firebase",
+    "emulators": "firebase emulators:start --project demo-zaman --only auth,firestore"
   },
   "devDependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
     "@fontsource/ibm-plex-mono": "^5.3.0",
     "@fontsource/ibm-plex-sans": "^5.3.0",
     "electron": "^45.4.1",
-    "electron-builder": "^26.18.0"
+    "electron-builder": "^26.18.0",
+    "esbuild": "^0.28.2",
+    "firebase": "^13.4.0",
+    "firebase-tools": "^15.37.0"
   },
   "build": {
     "appId": "com.ahmtrntsdln.zamanplanlayici",
