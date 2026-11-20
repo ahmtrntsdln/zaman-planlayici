@@ -307,6 +307,16 @@ nav.tabs button[aria-selected="true"]{background:var(--fill-strong);color:var(--
 .ncard[hidden]{display:none}
 #n-body{min-height:38vh;resize:vertical;line-height:1.5}
 
+/* kayıtta tamamlanan adlar üstü çizili olmasın */
+.group.log .ev.done .ti{text-decoration:none;color:var(--ink)}
+
+/* anahtar satırı (onay kutusu) */
+.switch{display:flex;gap:12px;align-items:flex-start;background:var(--fill);border-radius:14px;padding:12px;cursor:pointer}
+.switch input{width:22px;height:22px;margin:1px 0 0;flex:none;accent-color:var(--good)}
+.switch b{display:block;font-size:14px;font-weight:600}
+.switch small{display:block;font-size:12px;color:var(--muted)}
+#f-repbox[hidden],#f-repdays[hidden],#f-repweeks[hidden]{display:none!important}
+
 /* senkron kontrolü */
 .acctline{display:flex;align-items:center;gap:10px}
 .acctline p{flex:1;min-width:0}
@@ -862,7 +872,68 @@ if (HAS_FS){
   window.desktop.onFullScreen(v => { isFS = !!v; setBox("set-view", setViewHtml()); });
 }
 
+/* ---------- kayıt: 19 Kasım 2026'dan bu yana yapılan etkinlikler ---------- */
+const LOG_START = "2026-11-19";
+let calMode = "cal", logCat = null;   // logCat: null tümü, "" kategorisiz, ya da kategori kimliği
+const logCatId = e => state.categories.some(c => c.id === e.catId) ? e.catId : "";
+function logEvents(){
+  const now = new Date();
+  return state.events.filter(e => e.done && !e.sample && e.date >= LOG_START && startOf(e) <= now).sort((a, b) => startOf(b) - startOf(a));
+}
+function calSeg(){
+  return `<div class="glass seg" role="group" aria-label="Takvim görünümü" style="grid-template-columns:repeat(2,1fr)">
+    <button type="button" data-calmode="cal" aria-pressed="${calMode === "cal"}">Takvim</button>
+    <button type="button" data-calmode="log" aria-pressed="${calMode === "log"}">Kayıt</button></div>`;
+}
+function renderLog(){
+  const all = logEvents();
+  const s0 = new Date(LOG_START + "T00:00");
+  // kategori özetleri
+  const cats = state.categories.concat(all.some(e => logCatId(e) === "") ? [catById("")] : [])
+    .map(c => { const evs = all.filter(e => logCatId(e) === c.id); return {c, n: evs.length, min: evs.reduce((t, e) => t + spentMin(e), 0)}; })
+    .filter(x => x.n);
+  const list = logCat === null ? all : all.filter(e => logCatId(e) === logCat);
+  const total = list.reduce((t, e) => t + spentMin(e), 0);
+  const byDay = {}; list.forEach(e => (byDay[e.date] = byDay[e.date] || []).push(e));
+  const chips = `<div class="chips">
+      <button type="button" class="chip" data-logcat="*" aria-pressed="${logCat === null}">Tümü · ${all.length}</button>
+      ${cats.map(x => `<button type="button" class="chip" data-logcat="${x.c.id || "-"}" aria-pressed="${logCat === x.c.id}"><span class="sw" style="background:${x.c.color};width:10px;height:10px"></span>${esc(x.c.name)} · ${x.n}</button>`).join("")}
+    </div>`;
+  return `<section class="narrow">
+    ${calSeg()}
+    <div class="glass stats" style="grid-template-columns:repeat(3,1fr)">
+      <div class="stat"><b>${list.length}</b><span>etkinlik</span></div>
+      <div class="stat"><b>${fmtH(total)}</b><span>ayrılan süre</span></div>
+      <div class="stat"><b>${cats.length}</b><span>tür</span></div>
+    </div>
+    <p class="explain">${s0.getDate()} ${MONTHS[s0.getMonth()]} ${s0.getFullYear()}'dan bu yana tamamladığın etkinliklerin adı ve türü. Bir satıra dokunarak düzenleyebilirsin.</p>
+    ${all.length ? chips : ""}
+    ${Object.keys(byDay).sort().reverse().map(k => `<div class="daylabel">${esc(dayTitle(k))}</div><div class="glass group log">${byDay[k].map(e => evRow(e)).join("")}</div>`).join("")
+      || `<div class="glass group"><div class="empty">${all.length ? "Bu türde kayıt yok." : "Henüz tamamlanmış etkinlik yok. Bir etkinliği ✓ ile tamamladığında burada kayıt olarak görünür."}</div></div>`}
+    ${all.length ? `<div class="row"><button type="button" class="btn" id="log-csv">Kaydı indir (CSV)</button><span class="hint" id="log-msg" role="status"></span></div>` : ""}
+  </section>`;
+}
+async function exportLog(){
+  const msg = document.getElementById("log-msg");
+  const q = v => { const t = String(v ?? ""); return /[;"\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  const rows = [["Tarih", "Saat", "Etkinlik", "Tür", "Planlanan (dk)", "Ayrılan (dk)", "Verim", "Ne yapıldı"]];
+  logEvents().slice().reverse().forEach(e => rows.push([e.date, e.time, e.title, catById(e.catId).name, e.dur, spentMin(e),
+    reviewed(e) && e.rv > 0 ? RATINGS[e.rv][0] : "", e.rvText || ""]));
+  // Türkçe Excel ";" ayırıcı bekler; BOM, Türkçe karakterlerin doğru açılması için.
+  const text = "\ufeff" + rows.map(r => r.map(q).join(";")).join("\r\n");
+  const filename = "etkinlik-kaydi-" + dkey(new Date()) + ".csv";
+  try {
+    const file = typeof File !== "undefined" ? new File([text], filename, {type: "text/csv"}) : null;
+    if (IS_IOS && file && navigator.canShare && navigator.canShare({files: [file]})){
+      await navigator.share({files: [file], title: "Etkinlik kaydı"}); msg.textContent = "Kayıt paylaşıldı."; return;
+    }
+    downloadText(filename, text, "text/csv");
+    msg.textContent = (rows.length - 1) + " etkinlik dosyaya yazıldı.";
+  } catch(e){ msg.textContent = e && e.name === "AbortError" ? "İptal edildi." : "Kayıt indirilemedi: " + (e && e.message || e); }
+}
+
 function renderCal(){
+  if (calMode === "log") return renderLog();
   const y = calMonth.getFullYear(), m = calMonth.getMonth();
   const first = new Date(y,m,1), start = weekStart(first);
   const tk = dkey(new Date());
@@ -877,7 +948,7 @@ function renderCal(){
       <span>${d.getDate()}</span><span class="dots">${evs.slice(0,4).map(e => `<i style="background:${catById(e.catId).color}"></i>`).join("")}</span></button>`;
   }
   const sel = (byDay[selDay] || []).slice().sort(sortEv);
-  return `<div class="cols cal">
+  return `${calSeg()}<div class="cols cal">
     <div class="col">
       <div class="glass calp">
         <div class="monthbar"><button type="button" id="prev" aria-label="Önceki ay">‹</button><h2>${MONTHS[m]} ${y}</h2><button type="button" id="next" aria-label="Sonraki ay">›</button></div>
@@ -1037,6 +1108,8 @@ function render(){
 /* ---------- etkinlik formu ---------- */
 const scrim = document.getElementById("scrim"), sheet = document.getElementById("sheet");
 let sheetMode = null, editing = null, chosenCat = null, chosenDur = 60, chosenRate = 0, chosenSpent = 60;
+let chosenRep = "none", repDays = new Set();   // tekrar: none | daily | weekly; haftalıkta günler (0 Pzt … 6 Paz)
+const wdIdx = key => (new Date(key + "T00:00").getDay() + 6) % 7;
 function closeSheet(){ scrim.classList.remove("open"); sheetMode = null; editing = null; }
 function openEvent(id, date){
   const e = id ? state.events.find(x => x.id === id) : null;
@@ -1044,6 +1117,7 @@ function openEvent(id, date){
   const nowH = new Date(); nowH.setMinutes(0); nowH.setHours(Math.min(nowH.getHours()+1, 23));
   chosenCat = e ? e.catId : (state.categories[0] || {}).id;
   chosenDur = e ? +e.dur : 60;
+  chosenRep = "none"; repDays = new Set();
   const remind = e ? e.remind : 15;
   sheet.innerHTML = `
     <h3>${e ? "Etkinliği düzenle" : "Yeni etkinlik"}</h3>
@@ -1058,16 +1132,52 @@ function openEvent(id, date){
     <div class="f" style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--muted)">Ne kadar zaman ayıracaksın?
       <div class="chips" id="f-durs">${[30,45,60,90,120,180].map(d => `<button type="button" class="chip" data-dur="${d}" aria-pressed="${d === chosenDur}">${fmtDur(d)}</button>`).join("")}
       <label for="f-dur" style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="number" id="f-dur" min="5" max="1440" step="5" value="${chosenDur}" style="width:84px;padding:8px 10px"> dk</label></div></div>
+    ${e ? "" : `
+    <label class="switch" for="f-done"><input type="checkbox" id="f-done"><span><b>Bu etkinliği zaten yaptım</b><small>Geçmişte yapıp bitirdiğin bir etkinliği kaydet; ardından nasıl geçtiğini sorarım.</small></span></label>
+    <div class="f" style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:var(--muted)">Tekrar
+      <div class="chips" id="f-reps">${[["none","Tekrarlanmıyor"],["daily","Her gün"],["weekly","Her hafta"]].map(([k, l]) => `<button type="button" class="chip" data-rep="${k}" aria-pressed="${k === "none"}">${l}</button>`).join("")}</div>
+      <div id="f-repbox" hidden style="display:flex;flex-direction:column;gap:8px">
+        <div class="chips" id="f-repdays" aria-label="Haftanın günleri">${WD.map((w, i) => `<button type="button" class="chip" data-repday="${i}" aria-pressed="false">${w}</button>`).join("")}</div>
+        <div class="two">
+          <label class="f" for="f-until" style="font-weight:600">Son tarih<input type="date" id="f-until"></label>
+          <div class="chips" style="align-self:end" id="f-repweeks">${[4, 8, 14].map(n => `<button type="button" class="chip" data-repweeks="${n}">${n} hafta</button>`).join("")}</div>
+        </div>
+      </div>
+    </div>`}
+    ${e && e.seriesId ? `
+    <label class="switch" for="f-series"><input type="checkbox" id="f-series"><span><b>Serinin sonraki etkinliklerine de uygula</b><small>Tekrarlanan etkinlik · ${state.events.filter(x => x.seriesId === e.seriesId && x.date > e.date).length} sonraki etkinlik. Ad, kategori, saat, süre, hatırlatma ve not değişir; tarihler aynı kalır.</small></span></label>` : ""}
     <label class="f" for="f-rem">Hatırlatma<select id="f-rem">${REMINDERS.map(r => `<option value="${r[0]}" ${r[0] === remind ? "selected" : ""}>${r[1]}</option>`).join("")}</select></label>
     <label class="f" for="f-note">Not<textarea id="f-note" rows="2" maxlength="300">${esc(e ? e.note : "")}</textarea></label>
+    <p class="hint" id="f-msg" role="status"></p>
     ${e && reviewed(e) ? `<p class="rvsum">${e.rv > 0 ? `<b>${RATINGS[e.rv][0]}</b> · ${fmtDur(e.rvMin)} ayrıldı` : "<b>Yapılmadı</b>"}${e.rvText ? " · “" + esc(e.rvText) + "”" : ""}</p>` : ""}
     <div class="row" style="justify-content:space-between">
-      ${e ? `<div class="row"><button type="button" class="btn danger" id="f-del">Sil</button>${startOf(e) <= new Date() ? `<button type="button" class="btn" id="f-review">${reviewed(e) ? "Değerlendirmeyi düzenle" : "Değerlendir"}</button>` : ""}</div>` : "<span></span>"}
+      ${e ? `<div class="row"><button type="button" class="btn danger" id="f-del">Sil</button>${e.seriesId && state.events.some(x => x.seriesId === e.seriesId && x.date > e.date) ? `<button type="button" class="btn danger" id="f-delseries">Bunu ve sonrakileri sil</button>` : ""}${startOf(e) <= new Date() ? `<button type="button" class="btn" id="f-review">${reviewed(e) ? "Değerlendirmeyi düzenle" : "Değerlendir"}</button>` : ""}</div>` : "<span></span>"}
       <div class="row"><button type="button" class="btn" id="f-cancel">Vazgeç</button><button type="submit" class="btn primary">Kaydet</button></div>
     </div>`;
   scrim.classList.add("open");
   updateCatHint();
   setTimeout(() => { const t = document.getElementById("f-title"); if (t && !e) t.focus(); }, 50);
+}
+// Tekrar ayarına göre oluşturulacak tarihler (en çok 366).
+function repDates(start, until){
+  if (chosenRep === "none") return [start];
+  const out = [], end = new Date(until + "T00:00");
+  for (let d = new Date(start + "T00:00"); d <= end && out.length < 366; d = addDays(d, 1)){
+    if (chosenRep === "daily" || repDays.has((d.getDay() + 6) % 7)) out.push(dkey(d));
+  }
+  return out;
+}
+function repPreview(){
+  const box = document.getElementById("f-repbox"); if (!box) return;
+  box.hidden = chosenRep === "none";
+  document.getElementById("f-repdays").hidden = chosenRep !== "weekly";
+  document.getElementById("f-repweeks").hidden = chosenRep !== "weekly";
+  const msg = document.getElementById("f-msg"), date = document.getElementById("f-date").value, until = document.getElementById("f-until").value;
+  if (chosenRep === "none"){ msg.textContent = ""; return; }
+  if (!until){ msg.textContent = "Tekrarın biteceği son tarihi seç."; return; }
+  if (until < date){ msg.textContent = "Son tarih, başlangıç tarihinden önce olamaz."; return; }
+  const n = repDates(date, until).length;
+  msg.textContent = n ? n + " etkinlik oluşturulacak" + (n >= 366 ? " (en fazla 366)" : "") + "." : "Seçilen günlerde etkinlik yok.";
 }
 function updateCatHint(){
   const h = document.getElementById("f-cathint"); if (!h) return;
@@ -1317,6 +1427,27 @@ sheet.addEventListener("click", ev => {
   if (t.dataset.cat){ chosenCat = t.dataset.cat; sheet.querySelectorAll("[data-cat]").forEach(b => b.setAttribute("aria-pressed", String(b === t))); updateCatHint(); }
   if (t.dataset.dur){ chosenDur = +t.dataset.dur; document.getElementById("f-dur").value = chosenDur; sheet.querySelectorAll("[data-dur]").forEach(b => b.setAttribute("aria-pressed", String(b === t))); }
   if (t.dataset.color){ sheet.dataset.color = t.dataset.color; sheet.querySelectorAll("[data-color]").forEach(b => b.setAttribute("aria-pressed", String(b === t))); }
+  if (t.dataset.rep){
+    chosenRep = t.dataset.rep;
+    sheet.querySelectorAll("[data-rep]").forEach(b => b.setAttribute("aria-pressed", String(b === t)));
+    const date = document.getElementById("f-date").value || dkey(new Date());
+    if (chosenRep === "weekly" && !repDays.size){ repDays.add(wdIdx(date)); sheet.querySelectorAll("[data-repday]").forEach(b => b.setAttribute("aria-pressed", String(repDays.has(+b.dataset.repday)))); }
+    const u = document.getElementById("f-until"); if (chosenRep !== "none" && !u.value) u.value = dkey(addDays(new Date(date + "T00:00"), chosenRep === "daily" ? 6 : 7 * 8 - 1));
+    repPreview(); return;
+  }
+  if (t.dataset.repday){
+    const i = +t.dataset.repday; repDays.has(i) ? repDays.delete(i) : repDays.add(i);
+    t.setAttribute("aria-pressed", String(repDays.has(i))); repPreview(); return;
+  }
+  if (t.dataset.repweeks){
+    const date = document.getElementById("f-date").value || dkey(new Date());
+    document.getElementById("f-until").value = dkey(addDays(new Date(date + "T00:00"), 7 * +t.dataset.repweeks - 1)); repPreview(); return;
+  }
+  if (t.id === "f-delseries" && editing){
+    if (t.dataset.confirm){ const sid = editing.seriesId, from = editing.date; state.events = state.events.filter(x => !(x.seriesId === sid && x.date >= from)); closeSheet(); commit(); }
+    else { const n = state.events.filter(x => x.seriesId === editing.seriesId && x.date >= editing.date).length; t.dataset.confirm = "1"; t.textContent = n + " etkinliği silmek için tekrar dokun"; }
+    return;
+  }
   if (t.id === "f-del" && editing){
     if (t.dataset.confirm){ state.events = state.events.filter(x => x.id !== editing.id); closeSheet(); commit(); }
     else { t.dataset.confirm = "1"; t.textContent = "Silmek için tekrar dokun"; }
@@ -1332,6 +1463,7 @@ sheet.addEventListener("change", ev => {
 });
 sheet.addEventListener("input", ev => {
   if (ev.target.id === "r-min"){ chosenSpent = Math.max(0, +ev.target.value || 0); sheet.querySelectorAll("[data-spent]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.spent === chosenSpent))); }
+  if (ev.target.id === "f-date" || ev.target.id === "f-until") repPreview();
   if (ev.target.id === "f-dur"){ chosenDur = +ev.target.value || 0; sheet.querySelectorAll("[data-dur]").forEach(b => b.setAttribute("aria-pressed", String(+b.dataset.dur === chosenDur))); }
 });
 sheet.addEventListener("submit", ev => {
@@ -1362,12 +1494,45 @@ sheet.addEventListener("submit", ev => {
     const dur = Math.max(5, Math.min(1440, +document.getElementById("f-dur").value || chosenDur || 60));
     if (!title || !date || !time) return;
     const data = {title, catId: chosenCat || "", date, time, dur, remind: +document.getElementById("f-rem").value, note: document.getElementById("f-note").value.trim()};
+    const msg = document.getElementById("f-msg");
     if (editing){
       const changedTime = editing.date !== date || editing.time !== time || editing.remind !== data.remind;
       Object.assign(editing, data, {sample:false}); if (changedTime) editing.notified = false;
       // Form açıkken öğe başka cihazdan silindiyse, kaydedilen hâli geri ekle.
       if (!state.events.includes(editing)) state.events.push(editing);
-    } else state.events.push(Object.assign({id: uid(), done:false, notified:false, sample:false}, data));
+      const sb = document.getElementById("f-series");
+      if (sb && sb.checked){
+        const {date: _d, ...shared} = data;
+        state.events.filter(x => x.seriesId === editing.seriesId && x.date > editing.date).forEach(x => {
+          const moved = x.time !== shared.time || x.remind !== shared.remind;
+          Object.assign(x, shared); if (moved) x.notified = false;
+        });
+      }
+    } else {
+      const doneBox = document.getElementById("f-done"), already = !!(doneBox && doneBox.checked);
+      const until = (document.getElementById("f-until") || {}).value;
+      if (chosenRep !== "none"){
+        if (!until || until < date){ msg.textContent = !until ? "Tekrarın biteceği son tarihi seç." : "Son tarih, başlangıç tarihinden önce olamaz."; return; }
+        if (chosenRep === "weekly" && !repDays.size){ msg.textContent = "Haftanın en az bir gününü seç."; return; }
+      }
+      const dates = repDates(date, until);
+      if (!dates.length){ msg.textContent = "Seçilen günlerde etkinlik yok."; return; }
+      const now = new Date();
+      if (already && new Date(date + "T" + time) > now){ msg.textContent = "Henüz başlamamış bir etkinlik “yaptım” olarak kaydedilemez. Tarihi ya da saati kontrol et."; return; }
+      const sid = dates.length > 1 ? uid() : undefined;
+      const created = dates.map(k => {
+        const ev = Object.assign({id: uid(), done:false, notified:false, sample:false}, data, {date: k}, sid ? {seriesId: sid} : {});
+        // "Yaptım" seçiliyse: başlamış olanlar tamamlandı sayılır, gelecektekiler planlı kalır.
+        if (already && startOf(ev) <= now){ ev.done = true; ev.notified = true; markAsked(ev.id); }
+        return ev;
+      });
+      state.events.push(...created);
+      selDay = date;
+      closeSheet(); commit();
+      // Tek bir geçmiş etkinlik: hemen nasıl geçtiğini sor.
+      if (already && created.length === 1) openReview(created[0].id);
+      return;
+    }
     selDay = date;
   } else if (sheetMode === "cat"){
     const name = document.getElementById("c-name").value.trim(); if (!name) return;
@@ -1428,6 +1593,9 @@ document.getElementById("view").addEventListener("click", ev => {
   if (b.id === "prev"){ calMonth.setMonth(calMonth.getMonth()-1); render(); }
   if (b.id === "next"){ calMonth.setMonth(calMonth.getMonth()+1); render(); }
   if (b.id === "add-on-day") openEvent(null, selDay);
+  if (b.dataset.calmode){ calMode = b.dataset.calmode; render(); return; }
+  if (b.dataset.logcat){ logCat = b.dataset.logcat === "*" ? null : b.dataset.logcat === "-" ? "" : b.dataset.logcat; render(); return; }
+  if (b.id === "log-csv") return exportLog();
   if (b.id === "vw-prev"){ verimWeek--; render(); }
   if (b.id === "vw-next" && verimWeek < 0){ verimWeek++; render(); }
   if (b.id === "add-cat") openCat(null);
