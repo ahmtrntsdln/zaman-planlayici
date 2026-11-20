@@ -1,7 +1,7 @@
 /* Zaman Planlayıcı service worker: uygulama dosyalarını önbelleğe alır, internetsiz de açılır.
    Dosyaları değiştirip yayınladığında VERSION'ı artır ki telefonlar yeni sürümü alsın. */
 "use strict";
-const VERSION = "v14";
+const VERSION = "v15";
 const CACHE = "zaman-planlayici-" + VERSION;
 const ASSETS = [
   "./",
@@ -28,7 +28,10 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // cache: "reload": tarayıcının HTTP önbelleğindeki (GitHub Pages 10 dk tutar) eski kopyayı değil, sunucudakini al.
+  e.waitUntil(caches.open(CACHE)
+    .then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: "reload" }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (e) => {
@@ -45,9 +48,20 @@ self.addEventListener("fetch", (e) => {
   // Sayfanın kendisi: önce ağ (güncel sürüm), internet yoksa önbellek.
   if (req.mode === "navigate") {
     e.respondWith(
-      fetch(req)
-        .then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put("./index.html", copy)); return res; })
+      fetch(req, { cache: "no-cache" })
+        .then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put("./index.html", copy)); } return res; })
         .catch(() => caches.match("./index.html"))
+    );
+    return;
+  }
+  // Uygulama kodu (sync.js, firebase-config.js): sayfayla AYNI sürümde olmalı, o yüzden o da önce ağdan.
+  // Önbellekten gelseydi yeni index.html eski sync.js ile çalışırdı (ör. "ZPSync.check is not a function").
+  const path = new URL(req.url).pathname;
+  if (/\/(sync|firebase-config)\.js$/.test(path)) {
+    e.respondWith(
+      fetch(req, { cache: "no-cache" })
+        .then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); } return res; })
+        .catch(() => caches.match(req))
     );
     return;
   }

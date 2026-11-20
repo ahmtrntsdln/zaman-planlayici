@@ -1253,6 +1253,12 @@ function checkText(r){
 }
 async function runCheck(){
   if (checking || !window.ZPSync) return;
+  if (typeof window.ZPSync.check !== "function"){
+    // Sayfa yeni, senkron modülü eski sürümden kalmış: kontrol yapılamaz, kullanıcıya ne yapacağını söyle.
+    lastCheck = {error: "Uygulamanın yeni sürümü yarım yüklendi. Uygulamayı tamamen kapatıp yeniden aç.", at: Date.now()};
+    renderAccountState(true);
+    return;
+  }
   checking = true; renderAccountState(true);
   try { lastCheck = await window.ZPSync.check(); }
   catch(e){ lastCheck = {error: (e && e.message) || String(e), at: Date.now()}; }
