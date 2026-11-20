@@ -31,7 +31,8 @@ const api = {
   signIn: async () => { throw new Error("Senkron yapılandırılmadı."); },
   signUp: async () => { throw new Error("Senkron yapılandırılmadı."); },
   resetPassword: async () => { throw new Error("Senkron yapılandırılmadı."); },
-  signOut: async () => {}
+  signOut: async () => {},
+  check: async () => { throw new Error("Senkron yapılandırılmadı."); }
 };
 window.ZPSync = api;
 
@@ -62,6 +63,12 @@ async function start(){
   api.resetPassword = (email) => fb.sendPasswordResetEmail(auth, email).catch(e => { throw friendly(e); });
   api.signOut = () => fb.signOut(auth);
   api.push = () => { if (session) session.push(); };
+  // Elle senkron kontrolü: bekleyenleri gönder, buluttakini sunucudan oku, karşılaştır, farkları gider.
+  api.check = async () => {
+    if (!api.user) throw new Error("Kontrol için önce giriş yap.");
+    if (!session) throw new Error("Senkron oturumu henüz hazır değil.");
+    return session.check();
+  };
   // Bulut bağlantısını elle kesip açar (ör. test ya da ileride "senkronu duraklat"). Kapalıyken değişiklikler kuyrukta bekler.
   api.setNetwork = async (on) => {
     manualOffline = !on;
@@ -244,6 +251,67 @@ function openSession(fb, db, uid){
     setStatus("pending");
   }
 
+  const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(Object.assign(new Error("timeout"), { code: "timeout" })), ms))]);
+  // Sunucudaki (silinmemiş) öğeleri okur; izin yoksa null döner.
+  async function serverItems(kind){
+    try {
+      const snap = await fb.getDocsFromServer(fb.collection(db, "users", uid, kind));
+      return snap.docs.map(d => ({ id: d.id, data: d.data() }));
+    } catch (e) {
+      if (e && e.code === "permission-denied") return null;
+      throw e;
+    }
+  }
+  async function check(){
+    if (manualOffline || navigator.onLine === false) return { offline: true, at: Date.now() };
+    if (!ready) throw new Error("Bulutla ilk bağlantı henüz kurulmadı; birkaç saniye sonra tekrar dene.");
+    const res = { at: Date.now(), kinds: {}, fixed: 0, diff: 0, blocked: [] };
+    // 1) engellenen türleri yeniden dene ve yerel değişiklikleri gönder
+    KINDS.forEach(k => { blocked[k] = false; });
+    push();
+    try { await withTimeout(fb.waitForPendingWrites(db), 15000); }
+    catch (e) { if (e.code === "timeout") return { timeout: true, at: Date.now() }; throw e; }
+    // 2) sunucudakini oku, yerelle birleştir (son değişiklik kazanır), eksikleri gönder
+    for (const kind of KINDS) {
+      const docs = await serverItems(kind);
+      if (!docs) continue;
+      const before = JSON.stringify((ZP.state()[kind] || []).filter(x => x && !x.sample).map(itemJson).sort());
+      applyRemote(kind, docs);
+      // Sunucuda olmayan yerel öğeler base'den düşsün ki push onları yeniden yazsın.
+      const live = new Set(docs.filter(d => !d.data.deleted).map(d => d.id));
+      for (const id of [...base[kind].keys()]) if (!live.has(id)) base[kind].delete(id);
+      const after = JSON.stringify((ZP.state()[kind] || []).filter(x => x && !x.sample).map(itemJson).sort());
+      if (before !== after) res.fixed++;
+    }
+    saveBase();
+    push();
+    try { await withTimeout(fb.waitForPendingWrites(db), 15000); }
+    catch (e) { if (e.code === "timeout") return { timeout: true, at: Date.now() }; throw e; }
+    await new Promise(r => setTimeout(r, 100));   // reddedilen yazmaların hata işleyicisi çalışsın
+    // 3) doğrula: cihazdaki her öğe sunucudakiyle birebir aynı mı
+    for (const kind of KINDS) {
+      const docs = await serverItems(kind);
+      const local = (ZP.state()[kind] || []).filter(x => x && x.id && !x.sample);
+      if (!docs || blocked[kind]) { res.blocked.push(kind); res.kinds[kind] = { local: local.length, server: null }; continue; }
+      const server = new Map();
+      for (const { id, data } of docs) {
+        if (data.deleted) continue;
+        const { updatedAt, deleted, ...item } = data; item.id = id;
+        server.set(id, itemJson(item));
+      }
+      // farklı ya da sunucuda olmayan yerel öğeler + cihazda olmayan sunucu öğeleri
+      const localIds = new Set(local.map(x => x.id));
+      let diff = 0;
+      for (const x of local) if (server.get(x.id) !== itemJson(x)) diff++;
+      for (const id of server.keys()) if (!localIds.has(id)) diff++;
+      res.kinds[kind] = { local: local.length, server: server.size };
+      res.diff += diff;
+    }
+    res.ok = !res.diff && !res.blocked.length;
+    refresh();
+    return res;
+  }
+
   function refresh(){
     if (api.status === "error") return;
     if (!ready) return setStatus(manualOffline || navigator.onLine === false ? "offline" : "connecting");
@@ -255,6 +323,7 @@ function openSession(fb, db, uid){
 
   return {
     push,
+    check,
     refresh,
     stop(){
       unsubs.forEach(f => { try { f(); } catch (e) {} });

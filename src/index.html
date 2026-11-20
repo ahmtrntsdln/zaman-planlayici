@@ -307,6 +307,19 @@ nav.tabs button[aria-selected="true"]{background:var(--fill-strong);color:var(--
 .ncard[hidden]{display:none}
 #n-body{min-height:38vh;resize:vertical;line-height:1.5}
 
+/* senkron kontrolü */
+.acctline{display:flex;align-items:center;gap:10px}
+.acctline p{flex:1;min-width:0}
+.syncchk{flex:none;width:36px;height:36px;border-radius:50%;border:0;background:var(--fill);color:var(--accent-text);display:grid;place-items:center;transition:background .15s}
+.syncchk svg{width:18px;height:18px}
+.syncchk:disabled{cursor:default}
+@media (hover:hover){.syncchk:not(:disabled):hover{background:var(--fill-strong)}}
+@media (prefers-reduced-motion:no-preference){.syncchk.spin svg{animation:spin .9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}}
+@media (prefers-reduced-motion:reduce){.syncchk.spin{opacity:.5}}
+.chkmsg{margin:0;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.chkmsg.ok{color:var(--good)}
+.chkmsg.bad{color:var(--warn)}
+
 /* altbilgi */
 .credit{display:flex;justify-content:center;padding:10px 0 0}
 .credit a{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);text-decoration:none;padding:5px 12px 5px 5px;border-radius:999px;transition:background .15s}
@@ -1217,10 +1230,35 @@ function renderAccountState(force){
       </div>`;
   } else {
     body.innerHTML = `
-      <p class="hint" style="font-size:14px;margin:0" id="a-line">${accountLine()}</p>
+      <div class="acctline"><p class="hint" style="font-size:14px;margin:0" id="a-line">${accountLine()}</p>
+        <button type="button" class="syncchk ${checking ? "spin" : ""}" id="a-check" aria-label="Senkronu kontrol et" title="Senkronu kontrol et" ${checking ? "disabled" : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.5-4.6L4 8"/><path d="M4 3.5V8h4.5"/><path d="M4 13a8 8 0 0 0 14.5 4.6L20 16"/><path d="M20 20.5V16h-4.5"/></svg></button></div>
+      <p class="chkmsg ${lastCheck && lastCheck.ok ? "ok" : lastCheck && !checking ? "bad" : ""}" id="a-check-msg" role="status">${checking ? "Kontrol ediliyor…" : checkText(lastCheck)}</p>
       <p class="hint" style="margin:0">Çıkış yaparsan veriler bu cihazda kalır ama artık eşitlenmez.</p>
       <div class="row"><button type="button" class="btn danger" id="a-signout">Çıkış yap</button></div>`;
   }
+}
+/* ---------- senkron kontrolü (Ayarlar → ↻) ---------- */
+let lastCheck = null, checking = false;
+const KIND_LABEL = {events: "etkinlik", categories: "kategori", tasks: "görev", notes: "not"};
+function checkText(r){
+  if (!r) return "↻ ile cihazdaki verilerin bulutla birebir aynı olup olmadığını kontrol edebilirsin.";
+  const when = " · " + clock(new Date(r.at));
+  if (r.error) return "Kontrol edilemedi: " + esc(r.error) + when;
+  if (r.offline) return "İnternet bağlantısı yok; değişiklikler bağlantı gelince gönderilecek." + when;
+  if (r.timeout) return "Sunucu zamanında yanıt vermedi; biraz sonra tekrar dene." + when;
+  const counts = Object.keys(KIND_LABEL).filter(k => r.kinds[k] && r.kinds[k].server !== null).map(k => r.kinds[k].local + " " + KIND_LABEL[k]).join(", ");
+  if (r.ok) return "✓ Bulutla birebir aynı" + (r.fixed ? " (bulunan farklar düzeltildi)" : "") + ": " + counts + when;
+  if (r.blocked.length) return "Görevler ve notlar buluta yazılamıyor: Firebase güvenlik kuralları güncel değil." + (counts ? " Diğerleri eşit: " + counts + "." : "") + when;
+  return r.diff + " öğe bulutla hâlâ farklı görünüyor; birkaç saniye sonra tekrar dene." + when;
+}
+async function runCheck(){
+  if (checking || !window.ZPSync) return;
+  checking = true; renderAccountState(true);
+  try { lastCheck = await window.ZPSync.check(); }
+  catch(e){ lastCheck = {error: (e && e.message) || String(e), at: Date.now()}; }
+  checking = false;
+  renderAccountState(true);
+  const b = document.getElementById("a-check"); if (b) b.focus();
 }
 async function accountAction(kind){
   const s = window.ZPSync, msg = document.getElementById("a-msg");
@@ -1261,6 +1299,7 @@ sheet.addEventListener("click", ev => {
   if (t.id === "a-signup") return accountAction("signup");
   if (t.id === "a-reset") return accountAction("reset");
   if (t.id === "a-signout") return accountAction("signout");
+  if (t.id === "a-check") return runCheck();
   if (t.id === "btn-fs"){ closeSheet(); window.desktop.setFullScreen(!isFS); return; }
   if (t.id === "btn-ics") return exportIcs();
   if (t.id === "btn-notif") return askNotif();

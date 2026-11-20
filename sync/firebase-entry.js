@@ -6,5 +6,6 @@ export {
 } from "firebase/auth";
 export {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator,
-  collection, doc, onSnapshot, writeBatch, disableNetwork, enableNetwork
+  collection, doc, onSnapshot, writeBatch, disableNetwork, enableNetwork,
+  getDocsFromServer, waitForPendingWrites
 } from "firebase/firestore";
