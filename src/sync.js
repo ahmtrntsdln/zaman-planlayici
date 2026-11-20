@@ -118,6 +118,16 @@ function openSession(fb, db, uid){
     api.warn = "Görevler ve notlar şimdilik yalnızca bu cihazda: Firebase güvenlik kurallarının güncellenmesi gerekiyor.";
     refresh(); emit();
   }
+  // Kurallar güncellendiyse uygulamayı yeniden açmaya gerek kalmasın: engelli türleri ara ara yeniden dene.
+  function retryBlocked(){
+    const kinds = KINDS.filter(k => blocked[k]);
+    if (!kinds.length || !ready) return;
+    kinds.forEach(k => { blocked[k] = false; });
+    push();                                  // yine izin yoksa yazma hatası türü tekrar engeller
+  }
+  const retryTimer = setInterval(retryBlocked, 3 * 60 * 1000);
+  const onVisible = () => { if (document.visibilityState === "visible") retryBlocked(); };
+  document.addEventListener("visibilitychange", onVisible);
 
   setStatus("connecting");
 
@@ -221,7 +231,10 @@ function openSession(fb, db, uid){
         const batch = fb.writeBatch(db);
         for (const [, id, data] of kw.slice(i, i + 400)) batch.set(fb.doc(db, "users", uid, kind, id), data);
         // Çevrimdışıyken yazma kuyruğa alınır; bağlantı gelince Firestore kendisi gönderir.
-        batch.commit().catch(e => {
+        batch.commit().then(() => {
+          // Daha önce engellenen bir tür artık yazılabiliyor: uyarıyı kaldır.
+          if (!CORE.includes(kind) && api.warn && !KINDS.some(k => blocked[k])) { api.warn = ""; emit(); }
+        }).catch(e => {
           console.error("Bulut yazma hatası", kind, e);
           if (!CORE.includes(kind) && e && e.code === "permission-denied") { blockKind(kind); return; }
           setStatus("error", e && e.code === "permission-denied" ? "Buluta yazma izni yok (güvenlik kuralları)." : "Buluta yazılamadı.");
@@ -243,7 +256,11 @@ function openSession(fb, db, uid){
   return {
     push,
     refresh,
-    stop(){ unsubs.forEach(f => { try { f(); } catch (e) {} }); }
+    stop(){
+      unsubs.forEach(f => { try { f(); } catch (e) {} });
+      clearInterval(retryTimer);
+      document.removeEventListener("visibilitychange", onVisible);
+    }
   };
 }
 
